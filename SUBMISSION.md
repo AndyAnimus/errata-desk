@@ -22,6 +22,8 @@ The agent only keeps a `rulesClaim` whose `platform` matches and whose `effectiv
 
 Then you can **bind the call**. That writes a `ruling` document for that platform and day. The next ask returns the standing ruling from the lake instead of deriving again — the challenge line about a decision carrying across future builds, as an actual write.
 
+The public dataset holds the procedure claims, the three clocks, and nine desk calls written for this entry. Each call is a question a keyword search gets wrong, with the finding stored next to the date. Card images are not the product.
+
 ## Demo
 
 **Live desk (type anything):** https://luiscore.com/errata-desk/

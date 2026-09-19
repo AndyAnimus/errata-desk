@@ -179,6 +179,37 @@ async function saveRuling({platform, date, claimId, reading}) {
   return doc
 }
 
+function wantsCompare(text) {
+  return /all three|every table|each table|each clock|side by side|disagree|which table/.test(text.toLowerCase())
+}
+
+function askedDate(text) {
+  const low = text.toLowerCase()
+  const named = low.match(/\b(?:june|jun)\s+(\d{1,2})\b/)
+  if (named) return `2020-06-${String(Number(named[1])).padStart(2, '0')}`
+  const iso = low.match(/\b(2020-06-\d{2})\b/)
+  if (iso) return iso[1]
+  return null
+}
+
+function companionNamed(text) {
+  const low = text.toLowerCase()
+  const names = {
+    lurrus: 'Lurrus of the Dream-Den',
+    yorion: 'Yorion, Sky Nomad',
+    obosh: 'Obosh, the Preypiercer',
+    gyruda: 'Gyruda, Doom of Depths',
+    keruga: 'Keruga, the Macrosage',
+    umori: 'Umori, the Collector',
+    jegantha: 'Jegantha, the Wellspring',
+    kaheera: 'Kaheera, the Orphanguard',
+    zirda: 'Zirda, the Dawnwaker',
+    lutri: 'Lutri, the Spellchaser',
+  }
+  const hit = Object.keys(names).find((k) => low.includes(k))
+  return hit ? names[hit] : null
+}
+
 function unpack(payload) {
   if (!payload) return null
   if (Array.isArray(payload.result)) return payload.result
@@ -190,7 +221,9 @@ function unpack(payload) {
 async function answer(text) {
   const tools = []
   const known = resolveKnown(text)
-  const parsed = known || (await readQuestion(text))
+  const whoEarly = companionNamed(text)
+  const compareDate = wantsCompare(text) ? askedDate(text) || known?.date : null
+  const parsed = known || compareDate || whoEarly ? {inScope: true, reading: whoEarly || ''} : await readQuestion(text)
   const platform =
     known?.platform || (['tabletop', 'arena', 'mtgo'].includes(parsed.platform) ? parsed.platform : null)
   const date = known?.date || (/^\d{4}-\d{2}-\d{2}$/.test(parsed.date || '') ? parsed.date : null)
@@ -208,6 +241,54 @@ async function answer(text) {
     range: {startIndex: 0, endIndex: 3},
   })
   tools.push({name: 'array_field_reader', detail: 'rules-change-companion.clocks[0…3]'})
+
+  if (compareDate) {
+    const claimsQ =
+      '*[_type=="rulesClaim" && predicate=="bringIntoGame"]{_id,platform,status,value,quote,effectiveFrom,effectiveUntil,sourceTitle}'
+    const claimsRaw = await mcp('groq_query', {query: claimsQ})
+    tools.push({name: 'groq_query', detail: claimsQ})
+    const rows = unpack(claimsRaw)
+    const list = Array.isArray(rows) ? rows : []
+    const lanes = ['tabletop', 'mtgo', 'arena'].map((platform) => {
+      const mine = list.filter((c) => c.platform === platform)
+      const {inForce} = split(mine, compareDate)
+      return {platform, date: compareDate, value: inForce[0]?.value || 'No claim covers this day.', quote: inForce[0]?.quote || ''}
+    })
+    return {
+      reading: `all three clocks on ${compareDate}`,
+      date: compareDate,
+      compare: lanes,
+      answer: `On ${compareDate} the three tables are not on the same sentence.`,
+      inForce: [],
+      notInForce: [],
+      tools,
+      clocks: unpack(clocks),
+    }
+  }
+
+  const who = companionNamed(text)
+  if (who && !known) {
+    const cardQ = `*[_type=="companionCard" && name=="${who}"][0]{name,imageUrl,oracleText,typeLine,scryfallUrl}`
+    const noteQ = `*[_type=="cardRuling" && cardName=="${who}"]|order(publishedAt desc)[0...3]{publishedAt,comment,source}`
+    const cardRaw = await mcp('groq_query', {query: cardQ})
+    const noteRaw = await mcp('groq_query', {query: noteQ})
+    tools.push({name: 'groq_query', detail: cardQ})
+    tools.push({name: 'groq_query', detail: noteQ})
+    const card = unpack(cardRaw)
+    const notes = unpack(noteRaw)
+    const oracle = card && !Array.isArray(card) ? card.oracleText : ''
+    const restriction = String(oracle || '').split('\n')[0]
+    return {
+      reading: who,
+      answer: restriction || `No companion card named ${who} is in the lake.`,
+      card: card && !Array.isArray(card) ? card : null,
+      notes: Array.isArray(notes) ? notes : [],
+      inForce: [],
+      notInForce: [],
+      tools,
+      clocks: unpack(clocks),
+    }
+  }
 
   if (!parsed.inScope) {
     return {
@@ -387,7 +468,18 @@ const page = `<!doctype html>
   }
   footer { margin-top: 1.6rem; color: var(--mute); font-size: .8rem; }
   footer a { color: var(--accent); }
-  @media (max-width: 720px) {
+  .board { width: 100%; height: auto; margin: .2rem 0 1rem; }
+  .board .tick, .board .lane { fill: #9a917e; font-size: 12px; font-family: system-ui, sans-serif; }
+  .board .old { fill: #6a3b2e; }
+  .board .now { fill: #6f8f3a; }
+  #needleLine { stroke: #f0c75e; stroke-width: 2; }
+  #needleLabel { fill: #f0c75e; font-size: 13px; font-family: Georgia, serif; }
+  .calls { display: flex; flex-wrap: wrap; gap: .45rem; margin: 0 0 1rem; }
+  .calls button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: .35rem .7rem; font-size: .78rem; }
+  .portrait-row { display: flex; gap: .8rem; align-items: flex-start; }
+  .portrait-row img { width: 92px; border-radius: 8px; }
+  @media (max-width: 900px) {
+    .calls button { font-size: .72rem; }
     .clocks { grid-template-columns: 1fr; }
     h1 { font-size: 1.85rem; }
   }
@@ -396,20 +488,33 @@ const page = `<!doctype html>
   <main class="wrap">
     <p class="kicker">Sanity Context · Path One</p>
     <h1>Errata Desk</h1>
-    <p class="lede">Same companion sentence. Three clocks. The model only reads the question. The lake decides what is in force. Bind a call and that day stops being a guess.</p>
+    <p class="lede">One sentence. Three clocks. The desk wrote the calls. Keyword search still returns both lines and calls it a contradiction.</p>
 
-    <div class="clocks" id="clocks">
-      <div class="clock" data-p="tabletop"><div class="who">Tabletop</div><div class="when">Jun 1</div><div class="tag">switches 2020-06-01</div></div>
-      <div class="clock" data-p="mtgo"><div class="who">Magic Online</div><div class="when">Jun 3</div><div class="tag">switches 2020-06-03</div></div>
-      <div class="clock" data-p="arena"><div class="who">MTG Arena</div><div class="when">Jun 4</div><div class="tag">switches 2020-06-04</div></div>
-    </div>
+    <svg class="board" id="board" viewBox="0 0 720 210" role="img" aria-label="Three clocks, one week">
+      <text x="90" y="22" class="tick">Jun 1</text>
+      <text x="250" y="22" class="tick">Jun 2</text>
+      <text x="410" y="22" class="tick">Jun 3</text>
+      <text x="570" y="22" class="tick">Jun 4</text>
+      <g id="lane-tabletop" transform="translate(0,40)">
+        <text x="8" y="18" class="lane">Table</text>
+        <rect x="70" y="4" width="620" height="16" rx="8" class="old"/>
+        <rect x="90" y="4" width="600" height="16" rx="8" class="now"/>
+      </g>
+      <g id="lane-mtgo" transform="translate(0,88)">
+        <text x="8" y="18" class="lane">MTGO</text>
+        <rect x="70" y="4" width="620" height="16" rx="8" class="old"/>
+        <rect x="410" y="4" width="280" height="16" rx="8" class="now"/>
+      </g>
+      <g id="lane-arena" transform="translate(0,136)">
+        <text x="8" y="18" class="lane">Arena</text>
+        <rect x="70" y="4" width="620" height="16" rx="8" class="old"/>
+        <rect x="570" y="4" width="120" height="16" rx="8" class="now"/>
+      </g>
+      <line id="needleLine" x1="410" y1="30" x2="410" y2="176" />
+      <text id="needleLabel" x="410" y="198" text-anchor="middle">Jun 3 · three answers</text>
+    </svg>
 
-    <div class="needle" id="needle" hidden>
-      <span style="left:0%">Jun 1</span>
-      <span style="left:50%">Jun 2–3</span>
-      <span style="left:100%">Jun 4</span>
-      <i id="needleMark"></i>
-    </div>
+    <div class="calls" id="calls"></div>
 
     <label for="q">Ask any day around the switch</label>
     <textarea id="q">two days before Arena switched, do I pay 3 or cast it from outside the game?</textarea>
@@ -432,17 +537,17 @@ function esc(s) {
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
 }
 
-function setNeedle(date, platform) {
-  const el = document.getElementById('needle')
-  const mark = document.getElementById('needleMark')
-  if (!date) { el.hidden = true; return }
-  el.hidden = false
+function setNeedle(date) {
+  const line = document.getElementById('needleLine')
+  const label = document.getElementById('needleLabel')
+  if (!line || !date) return
   const day = Number(date.slice(-2))
-  const pct = Math.max(0, Math.min(100, ((day - 1) / 3) * 100))
-  mark.style.left = pct + '%'
-  document.querySelectorAll('.clock').forEach(c => {
-    c.classList.toggle('active', c.dataset.p === platform)
-  })
+  const x = day <= 1 ? 90 : day === 2 ? 250 : day === 3 ? 410 : day >= 4 ? 570 : 250
+  line.setAttribute('x1', x)
+  line.setAttribute('x2', x)
+  const names = {1:'Jun 1',2:'Jun 2',3:'Jun 3',4:'Jun 4'}
+  label.setAttribute('x', x)
+  label.textContent = (names[day] || date) + ' · three answers'
 }
 
 function claimCard(title, items, bind, kind) {
@@ -478,18 +583,29 @@ async function ask() {
       body: JSON.stringify({q: document.getElementById('q').value})
     })
     last = await res.json()
-    setNeedle(last.date, last.platform)
+    setNeedle(last.date)
     const boundClass = last.bound ? ' bound' : ''
+    const lanes = (last.compare || []).map(l =>
+      '<section class="panel force"><p class="eyebrow">' + esc(l.platform) + '</p><p class="answer">' + esc(l.value) + '</p></section>'
+    ).join('')
     out.innerHTML =
       '<section class="panel' + boundClass + '">' +
         '<p class="eyebrow">' + (last.bound ? 'Standing ruling' : 'Derived call') + '</p>' +
-        '<p class="answer">' + esc(last.answer) + '</p>' +
+        (last.card && last.card.imageUrl
+          ? '<div class="portrait-row"><img alt="" src="' + esc(last.card.imageUrl) + '"><div><p class="answer">' + esc(last.answer) + '</p><p class="muted">' + esc(last.card.name) + '</p></div></div>'
+          : '<p class="answer">' + esc(last.answer) + '</p>') +
         '<p class="muted">' + esc(last.reading || '') +
           (last.platform ? ' · ' + esc(last.platform) + ' @ ' + esc(last.date) : '') +
           (last.bound ? ' · already bound' : '') + '</p>' +
       '</section>' +
+      lanes +
       claimCard('In force on this clock', last.inForce, !last.bound, 'force') +
       claimCard('Also in the lake, not in force', last.notInForce, !last.bound, 'stale') +
+      (last.notes && last.notes.length
+        ? '<section class="panel"><p class="eyebrow">Dated card rulings</p>' + last.notes.map(n =>
+            '<div class="claim"><p>' + esc(n.comment) + '</p><p class="muted">' + esc(n.publishedAt) + ' · ' + esc(n.source) + '</p></div>'
+          ).join('') + '</section>'
+        : '') +
       toolsBox(last.tools)
     status.innerHTML = last.bound
       ? '<b>bound</b> · returned stored ruling'
@@ -523,6 +639,21 @@ document.getElementById('sample').onclick = () => {
   document.getElementById('q').value = 'On paper, June 2 2020 — pay 3 or cast from outside the game?'
   ask()
 }
+
+fetch('calls')
+  .then(r => r.json())
+  .then(data => {
+    const box = document.getElementById('calls')
+    const rows = Array.isArray(data) ? data : []
+    box.innerHTML = rows.map(c =>
+      '<button type="button" data-q="' + esc(c.question) + '">' + esc(c.title) + '</button>'
+    ).join('')
+    box.querySelectorAll('button').forEach(btn => btn.onclick = () => {
+      document.getElementById('q').value = btn.dataset.q
+      ask()
+    })
+  })
+  .catch(() => {})
 </script>
 </body>
 </html>`
@@ -550,6 +681,34 @@ createServer(async (req, res) => {
     return
   }
   const url = req.url || '/'
+  if (req.method === 'GET' && url.startsWith('/calls')) {
+    try {
+      const groq = '*[_type=="workedCall"]|order(title){title,question,date,finding}'
+      const data = await fetch(
+        `https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(groq),
+      ).then((r) => r.json())
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify(data.result || []))
+    } catch {
+      res.writeHead(500, {'Content-Type': 'application/json'})
+      res.end('[]')
+    }
+    return
+  }
+  if (req.method === 'GET' && url.startsWith('/cards')) {
+    try {
+      const groq = '*[_type=="companionCard"]|order(name){name,imageUrl}'
+      const data = await fetch(
+        `https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(groq),
+      ).then((r) => r.json())
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify(data.result || []))
+    } catch (e) {
+      res.writeHead(500, {'Content-Type': 'application/json'})
+      res.end('[]')
+    }
+    return
+  }
   if (req.method === 'GET') {
     res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'})
     res.end(page)
