@@ -41,6 +41,8 @@ Same words. Different clock. Bind locks the call.
 
 ## Code
 
+Public repo: https://github.com/AndyAnimus/errata-desk
+
 Every ask hits the hosted Sanity Context MCP for this Knowledge Base, not a private GROQ shortcut:
 
 1. `initial_context` — schema + instructions
@@ -86,5 +88,6 @@ What most entries show: an agent that answers. What this one adds: three clocks 
 - Organization: `o4kqib00c`
 - Studio: https://luis-errata-desk.sanity.studio/
 - Live desk: https://luiscore.com/errata-desk/
+- Repo: https://github.com/AndyAnimus/errata-desk
 - Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk
 - Public query: https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=*[_type==%22rulesClaim%22]
