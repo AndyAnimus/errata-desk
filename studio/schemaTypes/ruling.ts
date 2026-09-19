@@ -16,5 +16,17 @@ export const ruling = defineType({
     defineField({name: 'reading', title: 'What was asked', type: 'text'}),
     defineField({name: 'value', title: 'Standing answer', type: 'text'}),
     defineField({name: 'sourceUrl', type: 'url'}),
+    defineField({
+      name: 'decidedBy',
+      title: 'Decided by',
+      type: 'string',
+      description: 'Empty until a person signs. Binding a call does not fill this.',
+    }),
+    defineField({
+      name: 'decidedAt',
+      title: 'Decided at',
+      type: 'datetime',
+      description: 'Empty until a person signs.',
+    }),
   ],
 })

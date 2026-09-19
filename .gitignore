@@ -1,5 +1,7 @@
 secrets/
 node_modules/
 studio/node_modules/
+app/node_modules/
+app/dist/
 studio/dist/
 studio/.sanity/

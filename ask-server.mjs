@@ -1,11 +1,13 @@
 import {createServer} from 'node:http'
 import {readFileSync} from 'node:fs'
+import {assertTransition} from './workflow.mjs'
 
 const OLLAMA = 'http://127.0.0.1:11434/api/chat'
 const MODEL = 'qwen2.5:7b-instruct-q4_K_M'
 const PROJECT = 'gsu7qzk9'
 const DATASET = 'production'
-const MCP = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-desk`
+const MCP = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-desk?embeddings=true`
+const MCP_SIGN = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-sign`
 
 function loadToken() {
   const raw = readFileSync(new URL('./secrets/sanity.env', import.meta.url), 'utf8')
@@ -22,8 +24,8 @@ const CLOCKS = {
   arena: '2020-06-04',
 }
 
-async function mcp(name, args = {}) {
-  const res = await fetch(MCP, {
+async function mcp(name, args = {}, url = MCP) {
+  const res = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${TOKEN}`,
@@ -176,7 +178,120 @@ async function saveRuling({platform, date, claimId, reading}) {
     body: JSON.stringify({mutations: [{createOrReplace: doc}]}),
   })
   if (!res.ok) throw new Error('could not store ruling')
+  await openCase({platform, date, claimId, reading, value})
   return doc
+}
+
+async function mutate(mutations) {
+  const res = await fetch(`https://${PROJECT}.api.sanity.io/v2021-06-07/data/mutate/${DATASET}`, {
+    method: 'POST',
+    headers: {Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json'},
+    body: JSON.stringify({mutations}),
+  })
+  const body = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(body.error?.description || 'mutate failed')
+  return body
+}
+
+async function openCase({platform, date, claimId, reading, value}) {
+  const id = `case-${platform}-${date}`
+  const now = new Date().toISOString()
+  const doc = {
+    _id: id,
+    _type: 'deskCase',
+    title: `${platform} ${date}`,
+    platform,
+    date,
+    claimId,
+    reading: reading || '',
+    value,
+    state: 'awaitingSignature',
+    transitions: [
+      {_key: 'asked', at: now, from: 'asked', to: 'derived', actor: 'agent'},
+      {_key: 'hold', at: now, from: 'derived', to: 'awaitingSignature', actor: 'agent'},
+    ],
+  }
+  await mutate([{createIfNotExists: doc}])
+  return doc
+}
+
+async function loadCase(id) {
+  const groq = `*[_id=="${id}"][0]`
+  const data = await fetch(
+    `https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(groq),
+    {headers: {Authorization: `Bearer ${TOKEN}`}},
+  ).then((r) => r.json())
+  return data.result
+}
+
+async function signCase({id, name}) {
+  const who = String(name || '').trim()
+  if (!who) throw new Error('a person has to sign. decidedBy stays empty')
+  const row = await loadCase(id)
+  if (!row) throw new Error('no case')
+  assertTransition(row.state, 'signed', 'person')
+  const now = new Date().toISOString()
+  const transitions = [
+    ...(row.transitions || []),
+    {_key: 'sign-' + Date.now(), at: now, from: row.state, to: 'signed', actor: 'person'},
+  ]
+  await mutate([
+    {
+      patch: {
+        id,
+        set: {state: 'signed', decidedBy: who, decidedAt: now, transitions},
+      },
+    },
+  ])
+  return {id, state: 'signed', decidedBy: who, decidedAt: now}
+}
+
+async function advanceCase({id, to, actor}) {
+  const row = await loadCase(id)
+  if (!row) throw new Error('no case')
+  assertTransition(row.state, to, actor)
+  if (to === 'signed') throw new Error('decidedBy stays empty until a person signs')
+  const now = new Date().toISOString()
+  const transitions = [
+    ...(row.transitions || []),
+    {_key: 'step-' + Date.now(), at: now, from: row.state, to, actor},
+  ]
+  await mutate([
+    {patch: {id, set: {state: to, transitions}}},
+  ])
+  return {id, state: to, decidedBy: row.decidedBy || null, decidedAt: row.decidedAt || null}
+}
+
+async function attachDecision(result) {
+  const targets = result.compare?.length
+    ? result.compare
+    : result.platform && result.date
+      ? [{platform: result.platform, date: result.date}]
+      : []
+  const decisions = []
+  for (const t of targets) {
+    const q = `*[_type=="deskCase" && platform=="${t.platform}" && date=="${t.date}"][0]{_id,state,decidedBy,decidedAt,value}`
+    try {
+      const raw = await mcp('groq_query', {query: q}, MCP_SIGN)
+      const row = unpack(raw)
+      const doc = Array.isArray(row) ? row[0] : row
+      decisions.push({
+        platform: t.platform,
+        date: t.date,
+        _id: doc?._id || null,
+        state: doc?.state || null,
+        decidedBy: doc?.decidedBy || null,
+        decidedAt: doc?.decidedAt || null,
+        signed: Boolean(doc?.decidedBy && doc?.decidedAt),
+      })
+    } catch (e) {
+      decisions.push({platform: t.platform, date: t.date, error: String(e.message || e), signed: false})
+    }
+  }
+  result.decisions = decisions
+  result.tools = result.tools || []
+  result.tools.push({name: 'errata-sign', detail: 'second MCP · ' + MCP_SIGN})
+  return result
 }
 
 function wantsCompare(text) {
@@ -242,6 +357,18 @@ async function answer(text) {
   })
   tools.push({name: 'array_field_reader', detail: 'rules-change-companion.clocks[0…3]'})
 
+  let similar = []
+  try {
+    const safe = text.replace(/["\\]/g, ' ').slice(0, 180)
+    const semQ = `*[_type in ["workedCall","rulesClaim"]] | score(text::semanticSimilarity("${safe}")) | order(_score desc)[0...3]{_id,_type,title,finding,value,platform,_score}`
+    const semRaw = await mcp('groq_query', {query: semQ})
+    tools.push({name: 'groq_query', detail: 'text::semanticSimilarity'})
+    const sem = unpack(semRaw)
+    similar = Array.isArray(sem) ? sem : []
+  } catch {
+    tools.push({name: 'groq_query', detail: 'semantic search not ready'})
+  }
+
   if (compareDate) {
     const claimsQ =
       '*[_type=="rulesClaim" && predicate=="bringIntoGame"]{_id,platform,status,value,quote,effectiveFrom,effectiveUntil,sourceTitle}'
@@ -263,6 +390,7 @@ async function answer(text) {
       notInForce: [],
       tools,
       clocks: unpack(clocks),
+      similar,
     }
   }
 
@@ -526,7 +654,7 @@ const page = `<!doctype html>
     <div id="out"></div>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
-      · Context <code>gsu7qzk9 / production / errata-desk</code>
+      · Context <code>errata-desk</code> and <code>errata-sign</code>
     </footer>
   </main>
 <script>
@@ -560,6 +688,23 @@ function claimCard(title, items, bind, kind) {
       (c.sourceTitle ? ' · ' + esc(c.sourceTitle) : '') + '</p>' +
       (bind ? '<button class="bind" data-id="' + esc(c._id) +'">Bind this call into the lake</button>' : '') +
     '</div>').join('') + '</section>'
+}
+
+function decisionBox(list) {
+  if (!list || !list.length) return ''
+  return list.map(d => {
+    const empty = !d.signed
+    return '<section class="panel ' + (empty ? 'stale' : 'bound') + '">' +
+      '<p class="eyebrow">errata-sign · ' + esc(d.platform || '') + '</p>' +
+      '<p class="answer">' + (empty ? 'Unsigned' : 'Signed') + '</p>' +
+      '<p class="muted">decidedBy: ' + esc(d.decidedBy || '—') + ' · decidedAt: ' + esc(d.decidedAt || '—') +
+      (d.state ? ' · ' + esc(d.state) : '') + '</p>' +
+      (empty && d._id
+        ? '<div class="actions"><input id="signer" placeholder="Sign as" style="background:#0e0c0a;color:inherit;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem">' +
+          '<button class="bind" id="sign" data-case="' + esc(d._id) + '">Sign</button></div>'
+        : '') +
+      '</section>'
+  }).join('')
 }
 
 function toolsBox(tools) {
@@ -601,6 +746,7 @@ async function ask() {
       lanes +
       claimCard('In force on this clock', last.inForce, !last.bound, 'force') +
       claimCard('Also in the lake, not in force', last.notInForce, !last.bound, 'stale') +
+      decisionBox(last.decisions) +
       (last.notes && last.notes.length
         ? '<section class="panel"><p class="eyebrow">Dated card rulings</p>' + last.notes.map(n =>
             '<div class="claim"><p>' + esc(n.comment) + '</p><p class="muted">' + esc(n.publishedAt) + ' · ' + esc(n.source) + '</p></div>'
@@ -626,6 +772,24 @@ async function ask() {
       })
       await ask()
     })
+    const sign = out.querySelector('#sign')
+    if (sign) sign.onclick = async () => {
+      const name = (out.querySelector('#signer') || {}).value || ''
+      sign.disabled = true
+      status.innerHTML = '<b>signing</b> · person only'
+      const res = await fetch('sign', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({id: sign.dataset.case, name})
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        status.innerHTML = '<b>unsigned</b> · ' + esc(data.error || 'not signed')
+        sign.disabled = false
+        return
+      }
+      await ask()
+    }
   } catch (e) {
     out.innerHTML = '<section class="panel stale"><p class="answer">Ask failed.</p><p class="muted">' + esc(e.message || e) + '</p></section>'
     status.innerHTML = '<b>error</b>'
@@ -681,6 +845,44 @@ createServer(async (req, res) => {
     return
   }
   const url = req.url || '/'
+  const pathOnly = url.split('?')[0]
+  if (pathOnly.startsWith('/sanity-api/')) {
+      const target = 'https://gsu7qzk9.api.sanity.io' + pathOnly.slice('/sanity-api'.length) + (url.includes('?') ? '?' + url.split('?')[1] : '')
+    try {
+      const upstream = await fetch(target, {headers: {Accept: 'application/json'}})
+      const buf = Buffer.from(await upstream.arrayBuffer())
+      res.writeHead(upstream.status, {'Content-Type': upstream.headers.get('content-type') || 'application/json'})
+      res.end(buf)
+    } catch (e) {
+      res.writeHead(502, {'Content-Type': 'text/plain'})
+      res.end(String(e.message || e))
+    }
+    return
+  }
+  if (req.method === 'GET' && (pathOnly === '/app' || pathOnly.startsWith('/app/'))) {
+    const rel = pathOnly === '/app' || pathOnly === '/app/' ? '/index.html' : pathOnly.slice('/app'.length)
+    if (rel.includes('..')) {
+      res.writeHead(400)
+      res.end()
+      return
+    }
+    const file = new URL('./app/dist' + (rel.startsWith('/') ? rel : '/' + rel), import.meta.url)
+    try {
+      const body = readFileSync(file)
+      const type = rel.endsWith('.js') ? 'text/javascript' : rel.endsWith('.css') ? 'text/css' : 'text/html; charset=utf-8'
+      res.writeHead(200, {'Content-Type': type})
+      res.end(body)
+    } catch {
+      res.writeHead(404)
+      res.end('app not built')
+    }
+    return
+  }
+  if (req.method === 'GET' && (url === '/needle' || url.startsWith('/needle?'))) {
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'})
+    res.end(readFileSync(new URL('./needle.html', import.meta.url)))
+    return
+  }
   if (req.method === 'GET' && url.startsWith('/calls')) {
     try {
       const groq = '*[_type=="workedCall"]|order(title){title,question,date,finding}'
@@ -717,9 +919,23 @@ createServer(async (req, res) => {
   try {
     if (req.method === 'POST' && url.startsWith('/ask')) {
       const body = await readBody(req)
-      const result = await answer(String(body.q || ''))
+      const result = await attachDecision(await answer(String(body.q || '')))
       res.writeHead(200, {'Content-Type': 'application/json'})
       res.end(JSON.stringify(result))
+      return
+    }
+    if (req.method === 'POST' && url.startsWith('/sign')) {
+      const body = await readBody(req)
+      const doc = await signCase(body)
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({ok: true, ...doc}))
+      return
+    }
+    if (req.method === 'POST' && url.startsWith('/advance')) {
+      const body = await readBody(req)
+      const doc = await advanceCase(body)
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({ok: true, ...doc}))
       return
     }
     if (req.method === 'POST' && url.startsWith('/rule')) {

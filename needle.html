@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Needle</title>
+<style>
+  :root { --ink:#1c140c; --paper:#f3ead7; --old:#8a4b32; --now:#3f6b32; --gold:#b8860b; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; background: var(--paper); color: var(--ink); font: 16px/1.45 Georgia, serif; }
+  main { max-width: 46rem; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  h1 { font-weight: 500; font-size: 2.4rem; margin: 0; }
+  p.lede { max-width: 34rem; }
+  .dial { width: min(100%, 420px); display:block; margin: 1rem auto; }
+  .days { display:flex; gap:.5rem; justify-content:center; flex-wrap:wrap; }
+  button { font: inherit; border: 1px solid var(--ink); background: transparent; padding: .4rem .8rem; cursor: pointer; border-radius: 999px; }
+  button.on { background: var(--ink); color: var(--paper); }
+  .lanes { display:grid; gap:.6rem; margin-top: 1rem; }
+  .lane { border: 1px solid #c8b89a; padding: .8rem 1rem; background: #fffaf1; }
+  .lane b { display:block; letter-spacing:.12em; font-size:.75rem; text-transform:uppercase; }
+  a { color: var(--old); }
+</style>
+<body>
+<main>
+  <p>Path Two · a dial, not a chat</p>
+  <h1>The Needle</h1>
+  <p class="lede">Turn the day. The lake paints which table has already switched. Brown is the old reminder. Green is pay 3. June 3 is the only day the three rings disagree.</p>
+  <svg class="dial" id="dial" viewBox="0 0 200 200" role="img" aria-label="Day dial">
+    <circle cx="100" cy="100" r="78" fill="none" stroke="#8a4b32" stroke-width="10" stroke-dasharray="150 340" transform="rotate(-90 100 100)"/>
+    <circle id="green" cx="100" cy="100" r="62" fill="none" stroke="#3f6b32" stroke-width="10" stroke-dasharray="40 350" transform="rotate(20 100 100)"/>
+    <line id="hand" x1="100" y1="100" x2="100" y2="38" stroke="#b8860b" stroke-width="3"/>
+    <circle cx="100" cy="100" r="4" fill="#1c140c"/>
+    <text id="face" x="100" y="118" text-anchor="middle" font-size="14">Jun 3</text>
+  </svg>
+  <div class="days" id="days"></div>
+  <div class="lanes" id="lanes"></div>
+  <p><a href="/errata-desk/">The ask desk</a> · <a href="https://luis-errata-desk.sanity.studio/">Studio</a></p>
+</main>
+<script>
+const DAYS = [
+  {d:'2020-06-01', label:'Jun 1', angle:-70},
+  {d:'2020-06-02', label:'Jun 2', angle:-20},
+  {d:'2020-06-03', label:'Jun 3', angle:30},
+  {d:'2020-06-04', label:'Jun 4', angle:80},
+]
+const days = document.getElementById('days')
+function esc(s){return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
+async function turn(day) {
+  document.querySelectorAll('#days button').forEach(b => b.classList.toggle('on', b.dataset.d === day.d))
+  const hand = document.getElementById('hand')
+  const rad = (day.angle - 90) * Math.PI / 180
+  hand.setAttribute('x2', 100 + Math.cos(rad) * 62)
+  hand.setAttribute('y2', 100 + Math.sin(rad) * 62)
+  document.getElementById('face').textContent = day.label
+  const lanes = document.getElementById('lanes')
+  lanes.textContent = 'Reading the lake…'
+  const res = await fetch('ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({q:'On '+day.label+' 2020, what does each table do?'})})
+  const data = await res.json()
+  lanes.innerHTML = (data.compare || []).map(l => '<div class="lane"><b>'+esc(l.platform)+'</b>'+esc(l.value)+'</div>').join('')
+    || '<div class="lane">'+esc(data.answer || data.error || 'No lanes')+'</div>'
+}
+DAYS.forEach(day => {
+  const b = document.createElement('button')
+  b.textContent = day.label
+  b.dataset.d = day.d
+  b.onclick = () => turn(day)
+  days.appendChild(b)
+})
+turn(DAYS[2])
+</script>

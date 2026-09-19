@@ -68,20 +68,42 @@ Schema in the deployed Studio:
 
 - `rulesClaim` — game, subject, predicate, platform, status, value, quote, effectiveFrom, effectiveUntil, sourceTitle, sourceUrl
 - `rulesChange` — title, subject, sourceUrl, `clocks[]` (platform + switchesOn) for `array_field_reader`
-- `ruling` — standing answer after a bind
+- `ruling` — standing answer after a bind. `decidedBy` and `decidedAt` stay empty until a person signs
+- `deskCase` — the workflow document. States: asked → derived → awaitingSignature → signed. The last step is `actor: person` only
+- `deskWorkflow` — those transitions stored as data, not only as code
 
 ## How I Used Sanity
 
-Sanity Context is pointed at this project's own content.
+Two Context endpoints, not one.
+
+- `errata-desk` reads the clocks, the claims, and the worked calls. Embeddings are on.
+- `errata-sign` can see only `deskCase`. Its instructions say: if `decidedBy` or `decidedAt` is missing, the case is unsigned. Do not invent a signer.
+
+Ask "two days before Arena switched". The first endpoint returns the old reminder. The second returns `case-arena-2020-06-02` with `decidedBy: null` and `decidedAt: null`. Binding the call does not fill those fields. Signing does, and only with a name.
+
+The workflow is the document `workflow-sign-call`. An agent may move asked → derived → awaitingSignature. A person is the only actor who can move it to signed. A timed edit run against that workflow scored 8/8, including the refusal when the agent tried to sign and the refusal when the name was blank. The log is the document `timed-run-latest`.
+
+The App SDK board reads the same cases live: https://luiscore.com/errata-desk/app/
 
 - Studio v6 at https://luis-errata-desk.sanity.studio/
-- `sanity.agentContext` slug `errata-desk`, filter `_type in ["rulesClaim", "ruling", "rulesChange"]`
-- Instructions tell the agent: read clocks with `array_field_reader`, check `ruling` before deriving, never treat word overlap as current
-- Context MCP: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk`
+- Context MCP, rules: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true`
+- Context MCP, signature: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign`
 
 Source for every quote: the June 1, 2020 Banned and Restricted Announcement, which states the new companion rule and the three effective dates.
 
 What most entries show: an agent that answers. What this one adds: three clocks for one sentence, both claims on screen with sources, and a bind that writes the decision back into the lake.
+
+Dataset embeddings are on. This GROQ is live against `production`:
+
+```groq
+*[_type=="workedCall"]
+  | score(text::semanticSimilarity("three tables disagree on one day"))
+  | order(_score desc)[0]{title, _score}
+```
+
+It returned the desk call "Same words, June 2" with `_score` 8.1. The MCP URL the desk uses is `.../errata-desk?embeddings=true`, and each ask records a `text::semanticSimilarity` tool call.
+
+{% agent_session errata-desk-june-3-across-three-clocks-3xcvye %}
 
 ## Recorded session
 
