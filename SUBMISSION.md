@@ -83,6 +83,20 @@ Source for every quote: the June 1, 2020 Banned and Restricted Announcement, whi
 
 What most entries show: an agent that answers. What this one adds: three clocks for one sentence, both claims on screen with sources, and a bind that writes the decision back into the lake.
 
+## Recorded session
+
+June 3, 2020, asked live on the desk. The model did not pick the rule. Context did.
+
+Tools called, in order: `initial_context`, `array_field_reader` on `rules-change-companion.clocks`, `groq_query` for every `bringIntoGame` claim.
+
+Result:
+
+- Tabletop: pay 3. Switched June 1.
+- Magic Online: pay 3. Switches that day.
+- Arena: cast once from outside the game. Pay 3 is in the lake and not in force until June 4.
+
+Keyword search returns both sentences. The chart shows why they are not a contradiction.
+
 ## Sanity Project Details
 
 - Project ID: `gsu7qzk9`
