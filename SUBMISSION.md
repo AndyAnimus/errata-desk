@@ -34,12 +34,15 @@ Studio: https://luis-errata-desk.sanity.studio/
 
 Sign board (App SDK): https://luiscore.com/errata-desk/app/
 
-Judge prompts that pass right now (battery `10/10`, workflow timed run `8/8`):
+Judge prompts that pass right now (battery `14/14`, workflow timed run `8/8`):
 
 1. `two days before Arena switched, do I pay 3 or cast it from outside the game?`
 2. `On paper, June 2 2020 — pay 3 or cast from outside the game?`
 3. `On Jun 3 2020, what does each table do?`
 4. `dos días antes de que Arena cambiara, ¿pago 3 o lanzo desde fuera del juego?`
+5. `Deux jours avant qu'Arena change, est-ce que je paie 3 ou je joue depuis l'extérieur ?`
+6. `Zwei Tage bevor Arena umgestellt hat: zahle ich 3 oder spiele ich von außerhalb?`
+7. `On Arena, June 2 2020, is Fires of Invention banned in Standard?`
 
 Public dataset (no token):
 
@@ -59,10 +62,12 @@ Public repo: https://github.com/AndyAnimus/errata-desk
 Every ask hits the hosted Sanity Context MCP for this Knowledge Base, not a private GROQ shortcut:
 
 1. `initial_context` — schema + instructions
-2. `array_field_reader` — `rules-change-companion.clocks` (the three switch dates)
-3. `groq_query` — standing `ruling` first, then `rulesClaim` rows for that platform
-4. Window filter in code — the model never invents which claim is in force
-5. Optional `POST /rule` — writes `ruling-{platform}-{date}` so the next ask is bound
+2. `array_field_reader` — `rules-change-companion.clocks` (or the Standard-ban clocks)
+3. `errata-sources` — primary-source `sourceDoc` rows from the June 1, 2020 announcement
+4. `groq_query` — standing `ruling` first, then `rulesClaim` rows for that platform (with `valueFr` / `valueDe` / `valueEs` when the ask is in that language)
+5. Window filter in code — the model never invents which claim is in force
+6. Optional `POST /rule` — writes `ruling-{platform}-{date}` so the next ask is bound
+7. `errata-sign` — unsigned `deskCase` fields stay empty until a person signs
 
 The page shows the tool trace under the answer so judges can see Context was actually used.
 
@@ -77,8 +82,9 @@ function inForce(c, date) {
 
 Schema in the deployed Studio:
 
-- `rulesClaim` — game, subject, predicate, platform, status, value, quote, effectiveFrom, effectiveUntil, sourceTitle, sourceUrl
+- `rulesClaim` — game, subject, predicate, platform, status, value, valueFr, valueDe, valueEs, quote, effectiveFrom, effectiveUntil, sourceTitle, sourceUrl
 - `rulesChange` — title, subject, sourceUrl, `clocks[]` (platform + switchesOn) for `array_field_reader`
+- `sourceDoc` — primary-source excerpt (title, sourceUrl, about[], body) for the `errata-sources` MCP
 - `ruling` — standing answer after a bind. `decidedBy` and `decidedAt` stay empty until a person signs
 - `deskCase` — the workflow document. States: asked → derived → awaitingSignature → signed. The last step is `actor: person` only
 - `deskWorkflow` — those transitions stored as data, not only as code
@@ -89,8 +95,11 @@ Two Context endpoints, not one.
 
 - `errata-desk` reads the clocks, the claims, and the worked calls. Embeddings are on.
 - `errata-sign` can see only `deskCase`. Its instructions say: if `decidedBy` or `decidedAt` is missing, the case is unsigned. Do not invent a signer.
+- `errata-sources` can see only `sourceDoc` — primary-source excerpts from the June 1, 2020 B&R announcement (companion clocks + Standard bans). Same lake, third Context endpoint.
 
-Ask "two days before Arena switched". The first endpoint returns the old reminder. The second returns `case-arena-2020-06-02` with `decidedBy: null` and `decidedAt: null`. Binding the call does not fill those fields. Signing does, and only with a name.
+Ask "two days before Arena switched". The first endpoint returns the old reminder. The second returns `case-arena-2020-06-02` with `decidedBy: null` and `decidedAt: null`. Binding the call does not fill those fields. Signing does, and only with a name. Ban asks (Fires / Agent) hit the same clocks and the sources MCP.
+
+Asks in French, German, or Spanish get localized shells and `valueFr` / `valueDe` / `valueEs` claim bodies when present — not a translation layer bolted onto English-only content.
 
 The workflow is the document `workflow-sign-call`. An agent may move asked → derived → awaitingSignature. A person is the only actor who can move it to signed. A timed edit run against that workflow scored 8/8, including the refusal when the agent tried to sign and the refusal when the name was blank. The log is the document `timed-run-latest`.
 
@@ -99,6 +108,7 @@ The App SDK board reads the same cases live: https://luiscore.com/errata-desk/ap
 - Studio v6 at https://luis-errata-desk.sanity.studio/
 - Context MCP, rules: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true`
 - Context MCP, signature: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign`
+- Context MCP, sources: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources`
 
 Source for every quote: the June 1, 2020 Banned and Restricted Announcement, which states the new companion rule and the three effective dates.
 

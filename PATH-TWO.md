@@ -26,7 +26,7 @@ On June 2, Arena stays unsigned on the dial. Type a name and Sign. The agent is 
 
 No-token check: https://luiscore.com/errata-desk/check
 
-QA battery against the live desk: `10/10`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`.
+QA battery against the live desk: `14/14`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`.
 
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
 
@@ -38,7 +38,7 @@ Studio, Clock board first: https://luis-errata-desk.sanity.studio/
 
 https://github.com/AndyAnimus/errata-desk
 
-The dial is `needle.html`. It posts "On Jun N 2020, what does each table do?" to the desk, which calls `initial_context`, `array_field_reader` on the clocks, and `groq_query`. The green arc is painted from those dates, not from a picture of a card.
+The dial is `needle.html`. It posts "On Jun N 2020, what does each table do?" to the desk, which calls `initial_context`, `array_field_reader` on the clocks, `errata-sources`, and `groq_query`. The green arc is painted from those dates, not from a picture of a card.
 
 ## My Build Process
 
@@ -58,3 +58,5 @@ The session embed above is a Codex run that curled the public calls list and nam
 - Studio: https://luis-errata-desk.sanity.studio/
 - Needle: https://luiscore.com/errata-desk/needle
 - Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true
+- Sources MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources
+- Sign MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign

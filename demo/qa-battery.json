@@ -1,68 +1,92 @@
 {
-  "ranAt": "2026-09-20T02:24:49.904Z",
+  "ranAt": "2026-09-20T07:49:48.906Z",
   "base": "http://127.0.0.1:8791",
-  "passed": 10,
+  "passed": 14,
   "failed": 0,
-  "total": 10,
+  "total": 14,
   "results": [
     {
       "name": "arena-minus-two",
       "ok": true,
-      "ms": 1932,
+      "ms": 1928,
       "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "paper-june-2",
       "ok": true,
-      "ms": 1473,
+      "ms": 1995,
       "note": "Derived, not yet ruled. On 2020-06-02, tabletop: Pay 3 generic mana to put the c"
     },
     {
       "name": "june-3-compare",
       "ok": true,
-      "ms": 1695,
+      "ms": 2031,
       "note": "On 2020-06-03 the three tables are not on the same sentence."
     },
     {
       "name": "june-4-compare",
       "ok": true,
-      "ms": 1671,
+      "ms": 1995,
       "note": "On 2020-06-04 the three tables are not on the same sentence."
     },
     {
       "name": "spanish-arena",
       "ok": true,
-      "ms": 1412,
-      "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
+      "ms": 1864,
+      "note": "Decisión guardada. El 2020-06-02, arena: Lanza el compañero una vez desde fuera "
     },
     {
       "name": "semantic-tool",
       "ok": true,
-      "ms": 1858,
+      "ms": 2002,
       "note": "On 2020-06-02 the three tables are not on the same sentence."
     },
     {
       "name": "unsigned-fields",
       "ok": true,
-      "ms": 1443,
+      "ms": 1725,
       "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "agent-cannot-sign",
       "ok": true,
-      "ms": 51,
+      "ms": 56,
       "note": "illegal: agent cannot move awaitingSignature → signed"
     },
     {
       "name": "blank-sign-refused",
       "ok": true,
-      "ms": 3,
+      "ms": 4,
       "note": "a person has to sign. decidedBy stays empty"
+    },
+    {
+      "name": "french-arena",
+      "ok": true,
+      "ms": 1661,
+      "note": "Décision enregistrée. Le 2020-06-02, arena: Jouez le compagnon une fois depuis l"
+    },
+    {
+      "name": "german-arena",
+      "ok": true,
+      "ms": 1604,
+      "note": "Gespeicherte Entscheidung. Am 2020-06-02, arena: Spiele den Gefährten einmal von"
+    },
+    {
+      "name": "fires-arena-june2",
+      "ok": true,
+      "ms": 1424,
+      "note": "Derived, not yet ruled. On 2020-06-02, arena: Still legal in Standard until the "
+    },
+    {
+      "name": "sources-mcp",
+      "ok": true,
+      "ms": 1748,
+      "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "public-calls",
       "ok": true,
-      "ms": 34
+      "ms": 63
     }
   ]
 }

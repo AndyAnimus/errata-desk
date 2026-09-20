@@ -8,6 +8,7 @@ const PROJECT = 'gsu7qzk9'
 const DATASET = 'production'
 const MCP = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-desk?embeddings=true`
 const MCP_SIGN = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-sign`
+const MCP_SOURCES = `https://api.sanity.io/v2026-03-03/context/mcp/${PROJECT}/${DATASET}/errata-sources`
 
 function loadToken() {
   const raw = readFileSync(new URL('./secrets/sanity.env', import.meta.url), 'utf8')
@@ -59,20 +60,99 @@ function addDays(iso, n) {
 function platformOf(low) {
   if (/\barena\b|\bmtga\b/.test(low)) return 'arena'
   if (/\bmtgo\b|\bmodo\b|magic online/.test(low)) return 'mtgo'
-  if (/\bpaper\b|\bpapel\b|\bmesa\b|\btabletop\b|at the table|in person|kitchen/.test(low)) return 'tabletop'
+  if (/\bpaper\b|\bpapel\b|\bpapier\b|\bmesa\b|\btisch\b|\btabletop\b|at the table|in person|kitchen|sur (?:la )?table/.test(low)) {
+    return 'tabletop'
+  }
+  return null
+}
+
+function detectLang(text) {
+  const low = text.toLowerCase()
+  if (/[äöüß]|\b(zwei|tage|bevor|zahle|spiele|außerhalb|verboten|ist\s+fires|gefäh)/.test(low)) return 'de'
+  if (/[àâçéèêëïôùû]|\b(jours?|avant|payez|jouez|banni|est-il|sur arena|compagnon)/.test(low)) return 'fr'
+  if (/[áéíóúñ¿¡]|\b(días|antes|pago|lanzo|prohibido|compañero)/.test(low)) return 'es'
+  return 'en'
+}
+
+function pickValue(claim, lang) {
+  if (!claim) return ''
+  if (lang === 'fr' && claim.valueFr) return claim.valueFr
+  if (lang === 'de' && claim.valueDe) return claim.valueDe
+  if (lang === 'es' && claim.valueEs) return claim.valueEs
+  return claim.value || ''
+}
+
+function localizeShell(lang, kind, bits) {
+  const {platform, date, value} = bits
+  if (lang === 'fr') {
+    if (kind === 'bound') return `Décision enregistrée. Le ${date}, ${platform}: ${value}`
+    if (kind === 'derived') return `Dérivé, pas encore verrouillé. Le ${date}, ${platform}: ${value}`
+    if (kind === 'compare') return `Le ${date}, les trois tables ne sont pas sur la même phrase.`
+  }
+  if (lang === 'de') {
+    if (kind === 'bound') return `Gespeicherte Entscheidung. Am ${date}, ${platform}: ${value}`
+    if (kind === 'derived') return `Abgeleitet, noch nicht gebunden. Am ${date}, ${platform}: ${value}`
+    if (kind === 'compare') return `Am ${date} stehen die drei Tische nicht auf demselben Satz.`
+  }
+  if (lang === 'es') {
+    if (kind === 'bound') return `Decisión guardada. El ${date}, ${platform}: ${value}`
+    if (kind === 'derived') return `Derivado, aún sin fijar. El ${date}, ${platform}: ${value}`
+    if (kind === 'compare') return `El ${date} las tres mesas no están en la misma frase.`
+  }
+  if (kind === 'bound') return `Standing ruling in the lake, not a fresh guess. On ${date}, ${platform}: ${value}`
+  if (kind === 'derived') return `Derived, not yet ruled. On ${date}, ${platform}: ${value}`
+  return `On ${date} the three tables are not on the same sentence.`
+}
+
+function banSubject(text) {
+  const low = text.toLowerCase()
+  if (/fires of invention|fires\b/.test(low)) return 'fires-of-invention'
+  if (/agent of treachery|agent\b/.test(low)) return 'agent-of-treachery'
   return null
 }
 
 function resolveKnown(text) {
   const low = text.toLowerCase()
-  const words = {one: 1, two: 2, three: 3, four: 4, uno: 1, dos: 2, tres: 3, cuatro: 4}
+  const words = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    uno: 1,
+    dos: 2,
+    tres: 3,
+    cuatro: 4,
+    zwei: 2,
+    drei: 3,
+    vier: 4,
+    un: 1,
+    deux: 2,
+    trois: 3,
+    quatre: 4,
+  }
   const rel = low.match(
-    /(\d+|one|two|three|four|uno|dos|tres|cuatro)\s+(?:días?|dias?|days?)\s+(?:antes\s+de\s+(?:que\s+)?|before\s+)(arena|mtga|tabletop|paper|mtgo|magic online|mesa|papel)/,
+    /(\d+|one|two|three|four|uno|dos|tres|cuatro|zwei|drei|vier|un|deux|trois|quatre)\s+(?:días?|dias?|days?|tage?|jours?)\s+(?:antes\s+de\s+(?:que\s+)?|before\s+|bevor\s+|avant\s+(?:qu['’]?e?\s*|que\s+)?)(arena|mtga|tabletop|paper|mtgo|magic online|mesa|papel|umgestellt|chang)/,
   )
   if (rel) {
     const n = words[rel[1]] || Number(rel[1])
-    const platform = platformOf(rel[2]) || platformOf(low)
+    const platform = platformOf(rel[2]) || platformOf(low) || 'arena'
     if (platform && Number.isFinite(n)) {
+      return {
+        inScope: true,
+        platform,
+        date: addDays(CLOCKS[platform], -n),
+        reading: `${n} day${n === 1 ? '' : 's'} before ${platform} switched (${CLOCKS[platform]})`,
+      }
+    }
+  }
+  // Messy FR/DE/ES: "deux jours avant qu Arena change" / "zwei Tage bevor Arena…"
+  const relLoose = low.match(
+    /(\d+|one|two|three|four|uno|dos|tres|cuatro|zwei|drei|vier|un|deux|trois|quatre)\s+(?:días?|dias?|days?|tage?|jours?)\s+(?:antes|before|bevor|avant)\b/,
+  )
+  if (relLoose) {
+    const n = words[relLoose[1]] || Number(relLoose[1])
+    const platform = platformOf(low) || 'arena'
+    if (Number.isFinite(n)) {
       return {
         inScope: true,
         platform,
@@ -90,12 +170,17 @@ function resolveKnown(text) {
     }
   }
   const dated =
-    low.match(/\b(?:june|jun|junio)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*|\s+)(2020)\b/) ||
+    low.match(/\b(?:june|jun|junio|juin|juni)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*|\s+)(2020)\b/) ||
+    low.match(/\b(?:le\s+)?(\d{1,2})\s+(?:juin|junio|juni)\s+(2020)\b/) ||
     low.match(/\b(2020)-0?6-0?(\d{1,2})\b/)
   if (dated) {
     let d
-    if (dated[0].startsWith('2020')) {
-      d = `2020-06-${String(Number(dated[2])).padStart(2, '0')}`
+    if (dated[0].startsWith('2020') || /^2020/.test(dated[1])) {
+      // iso or weird
+      if (dated[0].includes('-')) d = `2020-06-${String(Number(dated[2])).padStart(2, '0')}`
+      else d = `2020-06-${String(Number(dated[1])).padStart(2, '0')}`
+    } else if (/^\d{1,2}$/.test(dated[1]) && dated[2] === '2020') {
+      d = `2020-06-${String(Number(dated[1])).padStart(2, '0')}`
     } else {
       d = `2020-06-${String(Number(dated[1])).padStart(2, '0')}`
     }
@@ -336,10 +421,15 @@ function unpack(payload) {
 
 async function answer(text) {
   const tools = []
+  const lang = detectLang(text)
+  const ban = banSubject(text)
   const known = resolveKnown(text)
   const whoEarly = companionNamed(text)
   const compareDate = wantsCompare(text) ? askedDate(text) || known?.date : null
-  const parsed = known || compareDate || whoEarly ? {inScope: true, reading: whoEarly || ''} : await readQuestion(text)
+  const parsed =
+    known || compareDate || whoEarly || ban
+      ? {inScope: true, reading: whoEarly || ban || ''}
+      : await readQuestion(text)
   const platform =
     known?.platform || (['tabletop', 'arena', 'mtgo'].includes(parsed.platform) ? parsed.platform : null)
   const date = known?.date || (/^\d{4}-\d{2}-\d{2}$/.test(parsed.date || '') ? parsed.date : null)
@@ -352,16 +442,31 @@ async function answer(text) {
 
   const clocks = await mcp('array_field_reader', {
     mode: 'range',
-    documentId: 'rules-change-companion',
+    documentId: ban ? 'rules-change-standard-bans' : 'rules-change-companion',
     field: 'clocks',
     range: {startIndex: 0, endIndex: 3},
   })
-  tools.push({name: 'array_field_reader', detail: 'rules-change-companion.clocks[0…3]'})
+  tools.push({
+    name: 'array_field_reader',
+    detail: ban ? 'rules-change-standard-bans.clocks' : 'rules-change-companion.clocks[0…3]',
+  })
+
+  try {
+    const srcQ = `*[_type=="sourceDoc"]|order(title)[0...3]{title,sourceUrl,about}`
+    const srcRaw = await mcp('groq_query', {query: srcQ}, MCP_SOURCES)
+    tools.push({name: 'errata-sources', detail: 'primary-source MCP · ' + MCP_SOURCES})
+    const src = unpack(srcRaw)
+    if (Array.isArray(src) && src[0]) {
+      tools.push({name: 'sourceDoc', detail: src[0].title + ' · ' + (src[0].sourceUrl || '')})
+    }
+  } catch (e) {
+    tools.push({name: 'errata-sources', detail: String(e.message || e).slice(0, 120)})
+  }
 
   let similar = []
   try {
     const safe = text.replace(/["\\]/g, ' ').slice(0, 180)
-    const semQ = `*[_type in ["workedCall","rulesClaim"]] | score(text::semanticSimilarity("${safe}")) | order(_score desc)[0...3]{_id,_type,title,finding,value,platform,_score}`
+    const semQ = `*[_type in ["workedCall","rulesClaim","sourceDoc"]] | score(text::semanticSimilarity("${safe}")) | order(_score desc)[0...3]{_id,_type,title,finding,value,platform,_score}`
     const semRaw = await mcp('groq_query', {query: semQ})
     tools.push({name: 'groq_query', detail: 'text::semanticSimilarity'})
     const sem = unpack(semRaw)
@@ -370,9 +475,38 @@ async function answer(text) {
     tools.push({name: 'groq_query', detail: 'semantic search not ready'})
   }
 
+  if (ban && (platform || date || compareDate || askedDate(text))) {
+    const day = date || compareDate || askedDate(text) || known?.date
+    const plat = platform || platformOf(text.toLowerCase()) || 'arena'
+    if (day) {
+      const claimsQ = `*[_type=="rulesClaim" && subject=="${ban}" && platform=="${plat}"]{_id,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl}`
+      const claimsRaw = await mcp('groq_query', {query: claimsQ})
+      tools.push({name: 'groq_query', detail: claimsQ})
+      const rows = unpack(claimsRaw)
+      const list = Array.isArray(rows) ? rows : []
+      const {inForce, notInForce} = split(list, day)
+      const top = inForce[0]
+      const value = pickValue(top, lang)
+      return {
+        lang,
+        reading: known?.reading || parsed.reading || ban,
+        platform: plat,
+        date: day,
+        answer: localizeShell(lang, 'derived', {platform: plat, date: day, value}),
+        inForce: inForce.map((c) => ({...c, value: pickValue(c, lang)})),
+        notInForce: notInForce.map((c) => ({...c, value: pickValue(c, lang)})),
+        tools,
+        clocks: unpack(clocks),
+        similar,
+        subject: ban,
+      }
+    }
+  }
+
   if (compareDate) {
-    const claimsQ =
-      '*[_type=="rulesClaim" && predicate=="bringIntoGame"]{_id,platform,status,value,quote,effectiveFrom,effectiveUntil,sourceTitle}'
+    const predicate = ban ? 'legalInStandard' : 'bringIntoGame'
+    const subjectFilter = ban ? ` && subject=="${ban}"` : ''
+    const claimsQ = `*[_type=="rulesClaim" && predicate=="${predicate}"${subjectFilter}]{_id,platform,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle}`
     const claimsRaw = await mcp('groq_query', {query: claimsQ})
     tools.push({name: 'groq_query', detail: claimsQ})
     const rows = unpack(claimsRaw)
@@ -380,13 +514,19 @@ async function answer(text) {
     const lanes = ['tabletop', 'mtgo', 'arena'].map((platform) => {
       const mine = list.filter((c) => c.platform === platform)
       const {inForce} = split(mine, compareDate)
-      return {platform, date: compareDate, value: inForce[0]?.value || 'No claim covers this day.', quote: inForce[0]?.quote || ''}
+      return {
+        platform,
+        date: compareDate,
+        value: pickValue(inForce[0], lang) || 'No claim covers this day.',
+        quote: inForce[0]?.quote || '',
+      }
     })
     return {
+      lang,
       reading: `all three clocks on ${compareDate}`,
       date: compareDate,
       compare: lanes,
-      answer: `On ${compareDate} the three tables are not on the same sentence.`,
+      answer: localizeShell(lang, 'compare', {platform: '', date: compareDate, value: ''}),
       inForce: [],
       notInForce: [],
       tools,
@@ -422,7 +562,7 @@ async function answer(text) {
   if (!parsed.inScope) {
     return {
       reading: parsed.reading || 'Outside this desk.',
-      answer: 'This desk only knows the companion procedure. Ask about paper, Arena, or Magic Online around June 2020.',
+      answer: 'This desk knows companion procedure and the June 2020 Standard bans (Fires, Agent) across three clocks.',
       inForce: [],
       notInForce: [],
       tools,
@@ -446,41 +586,51 @@ async function answer(text) {
   const bound = unpack(boundRaw)
   const boundDoc = Array.isArray(bound) ? null : bound
 
-  const claimsQ = `*[_type=="rulesClaim" && platform=="${platform}" && predicate=="bringIntoGame"]{_id,status,value,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl}`
+  const claimsQ = `*[_type=="rulesClaim" && platform=="${platform}" && predicate=="bringIntoGame"]{_id,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl}`
   const claimsRaw = await mcp('groq_query', {query: claimsQ})
   tools.push({name: 'groq_query', detail: claimsQ})
-  const rows = unpack(claimsRaw) || []
-  const list = Array.isArray(rows) ? rows : []
+  const claims = unpack(claimsRaw)
+  const list = Array.isArray(claims) ? claims : []
   const {inForce, notInForce} = split(list, date)
+  const localizedIn = inForce.map((c) => ({...c, value: pickValue(c, lang)}))
+  const localizedOut = notInForce.map((c) => ({...c, value: pickValue(c, lang)}))
 
   if (boundDoc && boundDoc.value) {
+    const boundClaim =
+      list.find((c) => c._id === boundDoc.claimId) || inForce[0] || null
+    const boundValue = pickValue(boundClaim, lang) || boundDoc.value
     return {
-      reading: parsed.reading || `${platform} on ${date}`,
+      lang,
+      reading: boundDoc.reading || known?.reading || parsed.reading,
       platform,
       date,
       bound: true,
-      answer: `Standing ruling in the lake, not a fresh guess. On ${date}, ${platform}: ${boundDoc.value}`,
-      inForce,
-      notInForce,
-      ruling: boundDoc,
+      answer: localizeShell(lang, 'bound', {platform, date, value: boundValue}),
+      inForce: localizedIn,
+      notInForce: localizedOut,
       tools,
       clocks: unpack(clocks),
+      similar,
     }
   }
 
-  const line = inForce[0]
+  const top = localizedIn[0]
   return {
-    reading: parsed.reading || `${platform} on ${date}`,
+    lang,
+    reading: known?.reading || parsed.reading,
     platform,
     date,
     bound: false,
-    answer: line
-      ? `Derived, not yet ruled. On ${date}, ${platform}: ${line.value}`
-      : `No claim covers ${platform} on ${date}.`,
-    inForce,
-    notInForce,
+    answer: localizeShell(lang, 'derived', {
+      platform,
+      date,
+      value: top?.value || 'No claim covers this day.',
+    }),
+    inForce: localizedIn,
+    notInForce: localizedOut,
     tools,
     clocks: unpack(clocks),
+    similar,
   }
 }
 
@@ -617,7 +767,7 @@ const page = `<!doctype html>
   <main class="wrap">
     <p class="kicker">Sanity Context · Path One</p>
     <h1>Errata Desk</h1>
-    <p class="lede">One sentence. Three clocks. The desk wrote the calls. Keyword search still returns both lines and calls it a contradiction.</p>
+    <p class="lede">One sentence. Three clocks. Companion procedure and the June 2020 Standard bans share the same announcement — and not the same effective day. Ask in English, French, German, or Spanish. The primary source is its own MCP.</p>
 
     <svg class="board" id="board" viewBox="0 0 720 210" role="img" aria-label="Three clocks, one week">
       <text x="90" y="22" class="tick">Jun 1</text>
@@ -650,13 +800,16 @@ const page = `<!doctype html>
     <div class="actions">
       <button id="go">Ask the lake</button>
       <button class="ghost" id="sample" type="button">Paper on June 2</button>
+      <button class="ghost" id="sampleFr" type="button">FR · Arena −2</button>
+      <button class="ghost" id="sampleDe" type="button">DE · Arena −2</button>
+      <button class="ghost" id="sampleBan" type="button">Fires · Arena June 2</button>
       <span class="chip" id="status"><b>idle</b> · Context MCP ready</span>
     </div>
     <div id="out"></div>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
-      · Context <code>errata-desk</code> and <code>errata-sign</code>
-      · <a href="check">public check</a> · QA 10/10
+      · Context <code>errata-desk</code>, <code>errata-sign</code>, <code>errata-sources</code>
+      · <a href="check">public check</a> · EN/FR/DE/ES
     </footer>
   </main>
 <script>
@@ -805,6 +958,18 @@ document.getElementById('sample').onclick = () => {
   document.getElementById('q').value = 'On paper, June 2 2020 — pay 3 or cast from outside the game?'
   ask()
 }
+document.getElementById('sampleFr').onclick = () => {
+  document.getElementById('q').value = 'Deux jours avant qu’Arena change, est-ce que je paie 3 ou je joue depuis l’extérieur ?'
+  ask()
+}
+document.getElementById('sampleDe').onclick = () => {
+  document.getElementById('q').value = 'Zwei Tage bevor Arena umgestellt hat: zahle ich 3 oder spiele ich von außerhalb?'
+  ask()
+}
+document.getElementById('sampleBan').onclick = () => {
+  document.getElementById('q').value = 'On Arena, June 2 2020, is Fires of Invention banned in Standard?'
+  ask()
+}
 
 fetch('calls')
   .then(r => r.json())
@@ -920,7 +1085,7 @@ createServer(async (req, res) => {
           inForce,
           notInForce,
           decision: deskCase.result || null,
-          mcp: {rules: MCP, sign: MCP_SIGN},
+          mcp: {rules: MCP, sign: MCP_SIGN, sources: MCP_SOURCES},
         }),
       )
     } catch (e) {

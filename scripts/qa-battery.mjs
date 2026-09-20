@@ -73,6 +73,35 @@ const cases = [
     expectStatus: (status, data) => status >= 400 || /empty|person|sign/i.test(JSON.stringify(data)),
   },
   {
+    name: 'french-arena',
+    q: "Deux jours avant qu'Arena change, est-ce que je paie 3 ou je joue depuis l'extérieur ?",
+    expect: (d) =>
+      d.platform === 'arena' &&
+      d.date === '2020-06-02' &&
+      (/extérieur|outside|cast/i.test(d.answer || '') || /extérieur|outside/i.test(JSON.stringify(d.inForce || []))),
+  },
+  {
+    name: 'german-arena',
+    q: 'Zwei Tage bevor Arena umgestellt hat: zahle ich 3 oder spiele ich von außerhalb?',
+    expect: (d) =>
+      d.platform === 'arena' &&
+      d.date === '2020-06-02' &&
+      (/außerhalb|outside|cast/i.test(d.answer || '') || /außerhalb|outside/i.test(JSON.stringify(d.inForce || []))),
+  },
+  {
+    name: 'fires-arena-june2',
+    q: 'On Arena, June 2 2020, is Fires of Invention banned in Standard?',
+    expect: (d) =>
+      d.subject === 'fires-of-invention' &&
+      d.date === '2020-06-02' &&
+      /legal|noch|aún|encore|until/i.test(d.answer + JSON.stringify(d.inForce || [])),
+  },
+  {
+    name: 'sources-mcp',
+    q: 'two days before Arena switched',
+    expect: (d) => (d.tools || []).some((t) => /errata-sources|sourceDoc/i.test(t.name + ' ' + (t.detail || ''))),
+  },
+  {
     name: 'public-calls',
     get: '/calls',
     expect: (rows) => Array.isArray(rows) && rows.length >= 5,

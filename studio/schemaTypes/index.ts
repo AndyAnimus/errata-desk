@@ -5,6 +5,7 @@ import {deskWorkflow} from './deskWorkflow'
 import {rulesClaim} from './rulesClaim'
 import {rulesChange} from './rulesChange'
 import {ruling} from './ruling'
+import {sourceDoc} from './sourceDoc'
 import {timedRun} from './timedRun'
 import {workedCall} from './workedCall'
 
@@ -18,4 +19,5 @@ export const schemaTypes = [
   deskCase,
   deskWorkflow,
   timedRun,
+  sourceDoc,
 ]
