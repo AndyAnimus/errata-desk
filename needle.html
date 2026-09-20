@@ -17,13 +17,16 @@
   .lanes { display:grid; gap:.6rem; margin-top: 1rem; }
   .lane { border: 1px solid #c8b89a; padding: .8rem 1rem; background: #fffaf1; }
   .lane b { display:block; letter-spacing:.12em; font-size:.75rem; text-transform:uppercase; }
+  .sign { margin-top: 1rem; border: 1px solid var(--old); padding: .9rem 1rem; background: #fff6ec; }
+  .sign input { font: inherit; border: 1px solid #c8b89a; padding: .4rem .6rem; width: min(100%, 14rem); background: #fffaf1; }
   a { color: var(--old); }
+  .meta { font-size: .85rem; color: #5c5348; }
 </style>
 <body>
 <main>
   <p>Path Two · a dial, not a chat</p>
   <h1>The Needle</h1>
-  <p class="lede">Turn the day. The lake paints which table has already switched. Brown is the old reminder. Green is pay 3. June 3 is the only day the three rings disagree.</p>
+  <p class="lede">Turn the day. The lake paints which table has already switched. Brown is the old reminder. Green is pay 3. June 3 is the only day the three rings disagree. On June 2 Arena, the case stays unsigned until a person signs.</p>
   <svg class="dial" id="dial" viewBox="0 0 200 200" role="img" aria-label="Day dial">
     <circle cx="100" cy="100" r="78" fill="none" stroke="#8a4b32" stroke-width="10" stroke-dasharray="150 340" transform="rotate(-90 100 100)"/>
     <circle id="green" cx="100" cy="100" r="62" fill="none" stroke="#3f6b32" stroke-width="10" stroke-dasharray="40 350" transform="rotate(20 100 100)"/>
@@ -33,7 +36,8 @@
   </svg>
   <div class="days" id="days"></div>
   <div class="lanes" id="lanes"></div>
-  <p><a href="/errata-desk/">The ask desk</a> · <a href="https://luis-errata-desk.sanity.studio/">Studio</a></p>
+  <div class="sign" id="sign" hidden></div>
+  <p><a href="/errata-desk/">The ask desk</a> · <a href="/errata-desk/app/">Sign board</a> · <a href="https://luis-errata-desk.sanity.studio/">Studio</a></p>
 </main>
 <script>
 const DAYS = [
@@ -43,6 +47,7 @@ const DAYS = [
   {d:'2020-06-04', label:'Jun 4', angle:80},
 ]
 const days = document.getElementById('days')
+let last = null
 function esc(s){return String(s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))}
 async function turn(day) {
   document.querySelectorAll('#days button').forEach(b => b.classList.toggle('on', b.dataset.d === day.d))
@@ -52,11 +57,30 @@ async function turn(day) {
   hand.setAttribute('y2', 100 + Math.sin(rad) * 62)
   document.getElementById('face').textContent = day.label
   const lanes = document.getElementById('lanes')
+  const sign = document.getElementById('sign')
   lanes.textContent = 'Reading the lake…'
+  sign.hidden = true
   const res = await fetch('ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({q:'On '+day.label+' 2020, what does each table do?'})})
-  const data = await res.json()
-  lanes.innerHTML = (data.compare || []).map(l => '<div class="lane"><b>'+esc(l.platform)+'</b>'+esc(l.value)+'</div>').join('')
-    || '<div class="lane">'+esc(data.answer || data.error || 'No lanes')+'</div>'
+  last = await res.json()
+  lanes.innerHTML = (last.compare || []).map(l => '<div class="lane"><b>'+esc(l.platform)+'</b>'+esc(l.value)+'</div>').join('')
+    || '<div class="lane">'+esc(last.answer || last.error || 'No lanes')+'</div>'
+  const arena = (last.decisions || []).find(d => d.platform === 'arena' && d._id)
+  if (arena) {
+    sign.hidden = false
+    if (arena.signed) {
+      sign.innerHTML = '<b>Signed</b><p class="meta">decidedBy: '+esc(arena.decidedBy)+' · decidedAt: '+esc(arena.decidedAt)+'</p>'
+    } else {
+      sign.innerHTML = '<b>Arena case unsigned</b><p class="meta">decidedBy and decidedAt stay empty until a person signs. The agent cannot fill them.</p>' +
+        '<input id="signer" placeholder="Sign as"><button id="doSign" type="button">Sign</button>'
+      document.getElementById('doSign').onclick = async () => {
+        const name = document.getElementById('signer').value || ''
+        const r = await fetch('sign', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: arena._id, name})})
+        const data = await r.json()
+        if (!r.ok) { sign.innerHTML = '<b>Still unsigned</b><p class="meta">'+esc(data.error || 'refused')+'</p>'; return }
+        turn(day)
+      }
+    }
+  }
 }
 DAYS.forEach(day => {
   const b = document.createElement('button')

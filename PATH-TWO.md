@@ -22,6 +22,12 @@ That board reads `deskCase` documents live. `decidedBy` and `decidedAt` render a
 
 Turn it: https://luiscore.com/errata-desk/needle
 
+On June 2, Arena stays unsigned on the dial. Type a name and Sign. The agent is refused if it tries that move. The same case shows on the App SDK board: https://luiscore.com/errata-desk/app/
+
+No-token check: https://luiscore.com/errata-desk/check
+
+QA battery against the live desk: `10/10`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`.
+
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
 
 Studio, Clock board first: https://luis-errata-desk.sanity.studio/

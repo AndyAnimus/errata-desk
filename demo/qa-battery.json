@@ -1,0 +1,68 @@
+{
+  "ranAt": "2026-09-20T02:24:49.904Z",
+  "base": "http://127.0.0.1:8791",
+  "passed": 10,
+  "failed": 0,
+  "total": 10,
+  "results": [
+    {
+      "name": "arena-minus-two",
+      "ok": true,
+      "ms": 1932,
+      "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
+    },
+    {
+      "name": "paper-june-2",
+      "ok": true,
+      "ms": 1473,
+      "note": "Derived, not yet ruled. On 2020-06-02, tabletop: Pay 3 generic mana to put the c"
+    },
+    {
+      "name": "june-3-compare",
+      "ok": true,
+      "ms": 1695,
+      "note": "On 2020-06-03 the three tables are not on the same sentence."
+    },
+    {
+      "name": "june-4-compare",
+      "ok": true,
+      "ms": 1671,
+      "note": "On 2020-06-04 the three tables are not on the same sentence."
+    },
+    {
+      "name": "spanish-arena",
+      "ok": true,
+      "ms": 1412,
+      "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
+    },
+    {
+      "name": "semantic-tool",
+      "ok": true,
+      "ms": 1858,
+      "note": "On 2020-06-02 the three tables are not on the same sentence."
+    },
+    {
+      "name": "unsigned-fields",
+      "ok": true,
+      "ms": 1443,
+      "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
+    },
+    {
+      "name": "agent-cannot-sign",
+      "ok": true,
+      "ms": 51,
+      "note": "illegal: agent cannot move awaitingSignature → signed"
+    },
+    {
+      "name": "blank-sign-refused",
+      "ok": true,
+      "ms": 3,
+      "note": "a person has to sign. decidedBy stays empty"
+    },
+    {
+      "name": "public-calls",
+      "ok": true,
+      "ms": 34
+    }
+  ]
+}

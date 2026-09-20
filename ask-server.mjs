@@ -59,15 +59,15 @@ function addDays(iso, n) {
 function platformOf(low) {
   if (/\barena\b|\bmtga\b/.test(low)) return 'arena'
   if (/\bmtgo\b|\bmodo\b|magic online/.test(low)) return 'mtgo'
-  if (/\bpaper\b|\btabletop\b|at the table|in person|kitchen/.test(low)) return 'tabletop'
+  if (/\bpaper\b|\bpapel\b|\bmesa\b|\btabletop\b|at the table|in person|kitchen/.test(low)) return 'tabletop'
   return null
 }
 
 function resolveKnown(text) {
   const low = text.toLowerCase()
-  const words = {one: 1, two: 2, three: 3, four: 4}
+  const words = {one: 1, two: 2, three: 3, four: 4, uno: 1, dos: 2, tres: 3, cuatro: 4}
   const rel = low.match(
-    /(\d+|one|two|three|four)\s+days?\s+before\s+(arena|mtga|tabletop|paper|mtgo|magic online)/,
+    /(\d+|one|two|three|four|uno|dos|tres|cuatro)\s+(?:días?|dias?|days?)\s+(?:antes\s+de\s+(?:que\s+)?|before\s+)(arena|mtga|tabletop|paper|mtgo|magic online|mesa|papel)/,
   )
   if (rel) {
     const n = words[rel[1]] || Number(rel[1])
@@ -81,7 +81,7 @@ function resolveKnown(text) {
       }
     }
   }
-  if (/day before arena/.test(low)) {
+  if (/day before arena|día antes.*arena|dia antes.*arena/.test(low)) {
     return {
       inScope: true,
       platform: 'arena',
@@ -90,7 +90,7 @@ function resolveKnown(text) {
     }
   }
   const dated =
-    low.match(/\b(?:june|jun)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*|\s+)(2020)\b/) ||
+    low.match(/\b(?:june|jun|junio)\s+(\d{1,2})(?:st|nd|rd|th)?(?:\s*,?\s*|\s+)(2020)\b/) ||
     low.match(/\b(2020)-0?6-0?(\d{1,2})\b/)
   if (dated) {
     let d
@@ -99,7 +99,8 @@ function resolveKnown(text) {
     } else {
       d = `2020-06-${String(Number(dated[1])).padStart(2, '0')}`
     }
-    const platform = platformOf(low) || (/on paper|paper|table/.test(low) ? 'tabletop' : null)
+    const platform =
+      platformOf(low) || (/on paper|paper|table|papel|mesa/.test(low) ? 'tabletop' : null)
     if (platform) {
       return {
         inScope: true,
@@ -655,6 +656,7 @@ const page = `<!doctype html>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
       · Context <code>errata-desk</code> and <code>errata-sign</code>
+      · <a href="check">public check</a> · QA 10/10
     </footer>
   </main>
 <script>
@@ -894,6 +896,36 @@ createServer(async (req, res) => {
     } catch {
       res.writeHead(500, {'Content-Type': 'application/json'})
       res.end('[]')
+    }
+    return
+  }
+  if (req.method === 'GET' && url.startsWith('/check')) {
+    try {
+      const date = '2020-06-02'
+      const claimsQ = `*[_type=="rulesClaim" && platform=="arena"]{platform,value,effectiveFrom,effectiveUntil,status}`
+      const caseQ = `*[_id=="case-arena-2020-06-02"][0]{state,decidedBy,decidedAt}`
+      const [claims, deskCase] = await Promise.all([
+        fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(claimsQ)).then((r) => r.json()),
+        fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(caseQ)).then((r) => r.json()),
+      ])
+      const rows = claims.result || []
+      const inForce = rows.filter((c) => (!c.effectiveFrom || c.effectiveFrom <= date) && (!c.effectiveUntil || c.effectiveUntil > date))
+      const notInForce = rows.filter((c) => !inForce.includes(c))
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(
+        JSON.stringify({
+          path: 'public-query',
+          note: 'No Context token. Same Arena June 2 split the MCP would return.',
+          date,
+          inForce,
+          notInForce,
+          decision: deskCase.result || null,
+          mcp: {rules: MCP, sign: MCP_SIGN},
+        }),
+      )
+    } catch (e) {
+      res.writeHead(500, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({error: String(e.message || e)}))
     }
     return
   }

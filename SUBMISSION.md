@@ -28,7 +28,18 @@ The public dataset holds the procedure claims, the three clocks, and nine desk c
 
 **Live desk (type anything):** https://luiscore.com/errata-desk/
 
+No-token check of the Arena June 2 split (public GROQ, no Context key): https://luiscore.com/errata-desk/check
+
 Studio: https://luis-errata-desk.sanity.studio/
+
+Sign board (App SDK): https://luiscore.com/errata-desk/app/
+
+Judge prompts that pass right now (battery `10/10`, workflow timed run `8/8`):
+
+1. `two days before Arena switched, do I pay 3 or cast it from outside the game?`
+2. `On paper, June 2 2020 — pay 3 or cast from outside the game?`
+3. `On Jun 3 2020, what does each table do?`
+4. `dos días antes de que Arena cambiara, ¿pago 3 o lanzo desde fuera del juego?`
 
 Public dataset (no token):
 
