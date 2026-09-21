@@ -6,7 +6,7 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 *This is a submission for the [Sanity Challenge, Path Two: Vibe-Code Something Strange](https://dev.to/challenges/sanity-2026-09-16)*
 
-Open https://luiscore.com/errata-desk/needle. It starts on June 3: tabletop and Magic Online have switched, Arena has not. Turn to June 2 and sign the Arena case with a name. The agent is not allowed to do that step. The same unsigned case is on the App SDK board: https://luiscore.com/errata-desk/app/
+Open https://luiscore.com/errata-desk/score first if you want every Path Two probe in one click. Then https://luiscore.com/errata-desk/needle. It starts on June 3: tabletop and Magic Online have switched, Arena has not. Turn to June 2 and sign the Arena case with a name — or click Try as agent and watch the refuse. The same unsigned case is on the App SDK board: https://luiscore.com/errata-desk/app/. The live Workflows instance is https://luiscore.com/errata-desk/workflow.
 
 Project `gsu7qzk9`, dataset `production` (public).
 
@@ -24,15 +24,17 @@ That board reads `deskCase` documents live. `decidedBy` and `decidedAt` render a
 
 ## Demo
 
+Judge scorecard: https://luiscore.com/errata-desk/score
+
 Turn it: https://luiscore.com/errata-desk/needle
 
-On June 2, Arena stays unsigned on the dial. Type a name and Sign. The agent is refused if it tries that move. The same case shows on the App SDK board: https://luiscore.com/errata-desk/app/
+On June 2, Arena stays unsigned on the dial. Type a name and Sign, or click Try as agent. The agent is refused. The same case shows on the App SDK board: https://luiscore.com/errata-desk/app/
+
+Live Workflows instance: https://luiscore.com/errata-desk/workflow
 
 No-token check: https://luiscore.com/errata-desk/check
 
-The live workflow instance, no login: https://luiscore.com/errata-desk/workflow
-
-QA battery against the live desk: `54/54`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`. The public lake holds 272 `rulesClaim` rows and 17 primary-source excerpts from printed Wizards announcements (2019–2021), each claim carrying FR/DE/ES.
+QA battery against the live desk: `54/54`. Workflow timed run: `8/8` (`timed-run-latest`). The public lake holds 272 `rulesClaim` rows and 17 primary-source excerpts from printed Wizards announcements (2019–2021), each claim carrying FR/DE/ES.
 
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
 

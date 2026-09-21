@@ -8,10 +8,13 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 Open these, in order. No login.
 
-1. https://luiscore.com/errata-desk/ — the page asks itself. Arena on June 2 is still “cast from outside the game.” The pay-3 claim is on screen, labeled not in force.
-2. https://luiscore.com/errata-desk/needle — turn to June 3. Tabletop and Magic Online have switched. Arena has not.
-3. https://luiscore.com/errata-desk/check — same split, no token.
-4. Try to sign with a blank name, or as the agent. Both are refused. `decidedBy` stays empty.
+1. https://luiscore.com/errata-desk/score — live probes for both paths (lake, June 2 split, unsigned case, Needle June 3, FR, Field clocks, agent refuse, Workflows editor refuse).
+2. https://luiscore.com/errata-desk/ — the page asks itself. Arena on June 2 is still “cast from outside the game.” The pay-3 claim is on screen, labeled not in force.
+3. https://luiscore.com/errata-desk/needle — turn to June 3. Tabletop and Magic Online have switched. Arena has not. On June 2, try Sign and Try as agent.
+4. https://luiscore.com/errata-desk/workflow — editor token refused on sign; stage stays awaitingSignature.
+5. https://luiscore.com/errata-desk/check — companion June 2 split only, no token (small JSON).
+6. https://luiscore.com/errata-desk/app/ — App SDK board, unsigned dashes.
+7. Studio Workflows: https://luis-errata-desk.sanity.studio/workflows
 
 Project `gsu7qzk9`, dataset `production` (public).
 

@@ -37,7 +37,7 @@
   <div class="days" id="days"></div>
   <div class="lanes" id="lanes"></div>
   <div class="sign" id="sign" hidden></div>
-  <p><a href="/errata-desk/">The ask desk</a> · <a href="/errata-desk/app/">Sign board</a> · <a href="https://luis-errata-desk.sanity.studio/">Studio</a></p>
+  <p><a href="/errata-desk/">The ask desk</a> · <a href="/errata-desk/app/">Sign board</a> · <a href="/errata-desk/workflow">Workflow refuse</a> · <a href="/errata-desk/score">Scorecard</a> · <a href="https://luis-errata-desk.sanity.studio/workflows">Studio</a></p>
 </main>
 <script>
 const DAYS = [
@@ -71,13 +71,21 @@ async function turn(day) {
       sign.innerHTML = '<b>Signed</b><p class="meta">decidedBy: '+esc(arena.decidedBy)+' · decidedAt: '+esc(arena.decidedAt)+'</p>'
     } else {
       sign.innerHTML = '<b>Arena case unsigned</b><p class="meta">decidedBy and decidedAt stay empty until a person signs. The agent cannot fill them.</p>' +
-        '<input id="signer" placeholder="Sign as"><button id="doSign" type="button">Sign</button>'
+        '<input id="signer" placeholder="Sign as"><button id="doSign" type="button">Sign</button> ' +
+        '<button id="agentTry" type="button">Try as agent</button><p class="meta" id="agentOut"></p>'
       document.getElementById('doSign').onclick = async () => {
         const name = document.getElementById('signer').value || ''
         const r = await fetch('sign', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: arena._id, name})})
         const data = await r.json()
         if (!r.ok) { sign.innerHTML = '<b>Still unsigned</b><p class="meta">'+esc(data.error || 'refused')+'</p>'; return }
         turn(day)
+      }
+      document.getElementById('agentTry').onclick = async () => {
+        const out = document.getElementById('agentOut')
+        out.textContent = 'Asking…'
+        const r = await fetch('advance', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({id: arena._id, to:'signed', actor:'agent'})})
+        const data = await r.json()
+        out.textContent = data.error || data.answer || JSON.stringify(data)
       }
     }
   }

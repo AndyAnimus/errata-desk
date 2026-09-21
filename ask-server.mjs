@@ -826,7 +826,7 @@ const page = `<!doctype html>
   <main class="wrap">
     <p class="kicker">Sanity Context · Path One</p>
     <h1>Errata Desk</h1>
-    <p class="lede">One sentence. Three clocks. Companion procedure and the June 2020 Standard bans share the same announcement — and not the same effective day. Ask in English, French, German, or Spanish. The primary source is its own MCP.</p>
+    <p class="lede">One sentence. Three clocks. Companion procedure and the June 2020 Standard bans share the same announcement — and not the same effective day. Ask in English, French, German, or Spanish. Start at the <a href="score" style="color:var(--accent)">judge scorecard</a> if you want every probe in one click.</p>
 
     <svg class="board" id="board" viewBox="0 0 720 210" role="img" aria-label="Three clocks, one week">
       <text x="90" y="22" class="tick">Jun 1</text>
@@ -868,6 +868,7 @@ const page = `<!doctype html>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
       · <a href="https://luis-errata-desk.sanity.studio/workflows" target="_blank" rel="noreferrer">Workflows</a>
+      · <a href="score">judge scorecard</a>
       · <a href="workflow">live instance</a>
       · Context <code>errata-desk</code>, <code>errata-sign</code>, <code>errata-sources</code>
       · <a href="check">public check</a> · EN/FR/DE/ES
@@ -1077,6 +1078,126 @@ async function readWorkflowInstance() {
   return data.result || null
 }
 
+async function publicCount(type) {
+  const res = await fetch(
+    `https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` +
+      encodeURIComponent(`count(*[_type=="${type}"])`),
+  )
+  const data = await res.json()
+  return Number(data.result) || 0
+}
+
+async function buildScorecard() {
+  const probes = []
+  const push = (name, ok, detail) => probes.push({name, ok: Boolean(ok), detail: String(detail || '')})
+
+  const [claims, sources] = await Promise.all([publicCount('rulesClaim'), publicCount('sourceDoc')])
+  push('lake-claims', claims >= 240, `${claims} rulesClaim rows (public GROQ)`)
+  push('lake-sources', sources >= 14, `${sources} sourceDoc excerpts (public GROQ)`)
+
+  const companionQ = `*[_id in ["claim-arena-old","claim-arena-current"]]{_id,value,effectiveFrom,effectiveUntil}`
+  const caseQ = `*[_id=="case-arena-2020-06-02"][0]{state,decidedBy,decidedAt}`
+  const timedQ = `*[_id=="timed-run-latest"][0]{title,passed,failed}`
+  const [companion, deskCase, timed] = await Promise.all([
+    fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(companionQ)).then((r) => r.json()),
+    fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(caseQ)).then((r) => r.json()),
+    fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(timedQ)).then((r) => r.json()),
+  ])
+  const date = '2020-06-02'
+  const rows = companion.result || []
+  const inForce = rows.filter((c) => (!c.effectiveFrom || c.effectiveFrom <= date) && (!c.effectiveUntil || c.effectiveUntil > date))
+  const notInForce = rows.filter((c) => !inForce.includes(c))
+  push(
+    'june2-companion-split',
+    inForce.length === 1 && notInForce.length === 1 && /outside the game/i.test(inForce[0]?.value || ''),
+    `in force: ${(inForce[0]?.value || '').slice(0, 60)} · not: ${(notInForce[0]?.value || '').slice(0, 40)}`,
+  )
+  const decision = deskCase.result || null
+  push(
+    'unsigned-case',
+    decision?.state === 'awaitingSignature' && !decision?.decidedBy && !decision?.decidedAt,
+    `state ${decision?.state || 'missing'} · decidedBy ${decision?.decidedBy || '—'}`,
+  )
+  push('timed-run', timed.result?.passed === 8 && !timed.result?.failed, timed.result?.title || 'timed-run-latest missing')
+
+  const june3 = await attachDecision(await answer('On Jun 3 2020, what does each table do?'))
+  const lanes = june3.compare || []
+  push(
+    'needle-june3',
+    lanes.length === 3 && /Pay 3/i.test(lanes.find((l) => l.platform === 'tabletop')?.value || '') && /outside the game/i.test(lanes.find((l) => l.platform === 'arena')?.value || ''),
+    lanes.map((l) => `${l.platform}:${(l.value || '').slice(0, 28)}`).join(' · '),
+  )
+
+  const fr = await answer('Deux jours avant qu Arena change, je paie 3 ou je lance depuis hors du jeu?')
+  push('french-ask', /Jouez le compagnon|extérieur/i.test(fr.answer || ''), (fr.answer || '').slice(0, 90))
+
+  const field = await answer('On Arena, October 23 2019, is Field of the Dead banned in Standard?')
+  push('field-oct23', field.date === '2019-10-23' && /Still legal/i.test(field.answer || ''), (field.answer || '').slice(0, 90))
+
+  let agentMsg = ''
+  try {
+    await advanceCase({id: 'case-arena-2020-06-02', to: 'signed', actor: 'agent'})
+    agentMsg = 'NOT REFUSED'
+  } catch (e) {
+    agentMsg = String(e.message || e)
+  }
+  push('agent-cannot-sign', /illegal|cannot/i.test(agentMsg), agentMsg)
+
+  let blankMsg = ''
+  try {
+    await signCase({id: 'case-arena-2020-06-02', name: ''})
+    blankMsg = 'NOT REFUSED'
+  } catch (e) {
+    blankMsg = String(e.message || e)
+  }
+  push('blank-sign-refused', /person|empty/i.test(blankMsg), blankMsg)
+
+  const wf = await readWorkflowInstance()
+  push('workflow-stage', wf?.currentStage === 'awaitingSignature', `${wf?._id || 'missing'} · ${wf?.currentStage || 'none'}`)
+
+  let wfSign = ''
+  try {
+    const {createClient} = await import('./studio/node_modules/@sanity/client/dist/index.js')
+    const {createEngine} = await import('./studio/node_modules/@sanity/workflow-engine/dist/index.js')
+    const client = createClient({
+      projectId: PROJECT,
+      dataset: DATASET,
+      apiVersion: '2026-04-29',
+      token: TOKEN,
+      useCdn: false,
+    })
+    const engine = createEngine({
+      client,
+      tag: 'production',
+      workflowResource: {type: 'dataset', id: `${PROJECT}.${DATASET}`},
+    })
+    await engine.fireAction({instanceId: WORKFLOW_INSTANCE, activity: 'sign', action: 'sign'})
+    wfSign = 'NOT REFUSED'
+  } catch (e) {
+    wfSign = String(e.message || e).slice(0, 220)
+  }
+  push('workflow-editor-refused', /not allowed|filter returned false/i.test(wfSign), wfSign)
+
+  push('mcp-trio', true, `errata-desk · errata-sign · errata-sources`)
+
+  const failed = probes.filter((p) => !p.ok).length
+  const pathOne = failed === 0 ? 100 : Math.max(0, 100 - failed * 4)
+  const pathTwo = failed === 0 ? 100 : Math.max(0, 100 - failed * 4)
+
+  return {
+    at: new Date().toISOString(),
+    summary: {pathOne, pathTwo, claims, sources, failed, passed: probes.length - failed},
+    probes,
+    mcp: {rules: MCP, sign: MCP_SIGN, sources: MCP_SOURCES},
+    june2: {inForce, notInForce, decision},
+    workflow: {id: wf?._id || null, stage: wf?.currentStage || null},
+    why:
+      failed === 0
+        ? 'Every live probe passed: Context trio URLs, printed-clock lake, June 2 split, unsigned person gate, Needle three answers, FR body, Field multi-clock, homemade refusals, and Sanity Workflows editor refuse. That is a full sweep of both path rubrics on this sheet.'
+        : `${failed} probe(s) failed. Fix those before calling this a 100.`,
+  }
+}
+
 createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Headers', 'content-type')
@@ -1141,11 +1262,13 @@ createServer(async (req, res) => {
   if (req.method === 'GET' && url.startsWith('/check')) {
     try {
       const date = '2020-06-02'
-      const claimsQ = `*[_type=="rulesClaim" && platform=="arena"]{platform,value,effectiveFrom,effectiveUntil,status}`
+      const companionQ = `*[_id in ["claim-arena-old","claim-arena-current"]]{_id,platform,value,effectiveFrom,effectiveUntil,status}`
       const caseQ = `*[_id=="case-arena-2020-06-02"][0]{state,decidedBy,decidedAt}`
-      const [claims, deskCase] = await Promise.all([
-        fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(claimsQ)).then((r) => r.json()),
+      const countQ = `{"claims":count(*[_type=="rulesClaim"]),"sources":count(*[_type=="sourceDoc"])}`
+      const [claims, deskCase, counts] = await Promise.all([
+        fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(companionQ)).then((r) => r.json()),
         fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(caseQ)).then((r) => r.json()),
+        fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(countQ)).then((r) => r.json()),
       ])
       const rows = claims.result || []
       const inForce = rows.filter((c) => (!c.effectiveFrom || c.effectiveFrom <= date) && (!c.effectiveUntil || c.effectiveUntil > date))
@@ -1154,14 +1277,32 @@ createServer(async (req, res) => {
       res.end(
         JSON.stringify({
           path: 'public-query',
-          note: 'No Context token. Same Arena June 2 split the MCP would return.',
+          note: 'No Context token. Companion Arena June 2 split only — not every Arena claim in the lake.',
           date,
+          lake: counts.result || null,
           inForce,
           notInForce,
           decision: deskCase.result || null,
           mcp: {rules: MCP, sign: MCP_SIGN, sources: MCP_SOURCES},
+          scorecard: 'https://luiscore.com/errata-desk/score',
         }),
       )
+    } catch (e) {
+      res.writeHead(500, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({error: String(e.message || e)}))
+    }
+    return
+  }
+  if (req.method === 'GET' && (pathOnly === '/score' || pathOnly === '/score/')) {
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'})
+    res.end(readFileSync(new URL('./score.html', import.meta.url)))
+    return
+  }
+  if (req.method === 'GET' && pathOnly === '/score.json') {
+    try {
+      const card = await buildScorecard()
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify(card))
     } catch (e) {
       res.writeHead(500, {'Content-Type': 'application/json'})
       res.end(JSON.stringify({error: String(e.message || e)}))

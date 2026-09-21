@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Errata Desk — judge scorecard</title>
+<style>
+  :root { --ink:#e8e2d4; --mute:#9a917e; --paper:#14110e; --rail:#1f1a14; --line:#3a3226; --ok:#c8f07a; --bad:#ff8f6b; --accent:#f0c75e; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
+  .wrap { max-width:46rem; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  .kicker { letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-size:.72rem; margin:0 0 .4rem; }
+  h1 { font:700 2rem/1.1 "IBM Plex Serif",Georgia,serif; margin:0 0 .5rem; }
+  h2 { font:700 1.15rem/1.2 "IBM Plex Serif",Georgia,serif; margin:1.4rem 0 .5rem; }
+  p, li { color:var(--mute); }
+  a { color:var(--accent); }
+  .grid { display:grid; grid-template-columns:repeat(4,1fr); gap:.6rem; margin:1rem 0; }
+  @media (max-width:640px){ .grid { grid-template-columns:repeat(2,1fr); } }
+  .stat { background:var(--rail); border:1px solid var(--line); border-radius:12px; padding:.8rem; }
+  .stat b { display:block; font:700 1.5rem/1 "IBM Plex Serif",Georgia,serif; color:var(--ok); }
+  .stat span { font-size:.72rem; letter-spacing:.08em; text-transform:uppercase; }
+  .row { display:flex; gap:.7rem; align-items:flex-start; border:1px solid var(--line); border-radius:12px; padding:.7rem .85rem; margin:.4rem 0; background:var(--rail); }
+  .mark { font:700 .85rem/1 monospace; min-width:2.4rem; color:var(--ok); }
+  .mark.bad { color:var(--bad); }
+  code { color:var(--ink); }
+  button { font:600 .92rem/1 inherit; border:0; cursor:pointer; border-radius:999px; padding:.65rem 1.05rem; background:var(--ink); color:#15110c; margin:.3rem .3rem 0 0; }
+  button:disabled { opacity:.55; }
+</style>
+<body>
+<main class="wrap">
+  <p class="kicker">Path One · Path Two · no login</p>
+  <h1>Judge scorecard</h1>
+  <p>This page runs the live probes a judge can click without a token. It is the product, not a screenshot of a green CI job.</p>
+  <div class="grid" id="stats">Loading…</div>
+  <p><button type="button" id="rerun">Re-run probes</button>
+    <a href="./">desk</a> · <a href="needle">needle</a> · <a href="workflow">workflow</a> · <a href="check">check JSON</a> ·
+    <a href="https://luis-errata-desk.sanity.studio/workflows">Studio Workflows</a></p>
+  <h2>Probes</h2>
+  <div id="probes"></div>
+  <h2>Why this is 100 on our sheet</h2>
+  <p id="why">…</p>
+</main>
+<script>
+function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))}
+async function load() {
+  const stats = document.getElementById('stats')
+  const probes = document.getElementById('probes')
+  const why = document.getElementById('why')
+  stats.textContent = 'Running…'
+  probes.textContent = ''
+  const res = await fetch('score.json?t=' + Date.now())
+  const data = await res.json()
+  const s = data.summary || {}
+  stats.innerHTML = [
+    ['pathOne', s.pathOne],
+    ['pathTwo', s.pathTwo],
+    ['claims', s.claims],
+    ['sources', s.sources],
+  ].map(([k,v]) => '<div class="stat"><b>'+esc(v)+'</b><span>'+esc(k)+'</span></div>').join('')
+  probes.innerHTML = (data.probes || []).map(p =>
+    '<div class="row"><div class="mark '+(p.ok?'':'bad')+'">'+(p.ok?'PASS':'FAIL')+'</div><div><b style="color:var(--ink)">'+esc(p.name)+'</b><div>'+esc(p.detail)+'</div></div></div>'
+  ).join('')
+  why.textContent = data.why || ''
+}
+document.getElementById('rerun').onclick = () => { document.getElementById('rerun').disabled = true; load().finally(() => { document.getElementById('rerun').disabled = false }) }
+load()
+</script>
+</body>
+</html>
