@@ -60,6 +60,16 @@ Embeddings are on. A meaning query for “three tables disagree on one day” re
 
 The session embed is a Codex run that curled the public calls list and named the June 3 call. It is that transcript, not a summary of it.
 
+## Sanity Workflows
+
+The homemade gate was not the product Brawndo shipped. I installed `@sanity/workflow-engine` and `@sanity/workflow-cli` at 0.33.0, the same early-access stack, and deployed a definition named `sign-call` v1 onto `gsu7qzk9.production`.
+
+The definition has four stages: asked, derived, awaitingSignature, signed. Derive and hold are `editor` actions. Sign is `administrator` only. The robot token on this project is an editor. `studio/scripts/run-sign-workflow.mjs` started instance `production.wf-instance.6be7291055cc`, fired derive, fired hold, and was refused on sign: `action filter returned false`. The instance stayed on `awaitingSignature`. Workflow system documents are not in the public API, so the log of that run is a normal document judges can read with no token:
+
+https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=*[_id==%22workflow-engine-run%22][0]{title,passed,steps}
+
+I did not mount the Studio Workflows tab. `@sanity/workflow-studio-plugin` 0.33.0 imports `Popover` from `@sanity/ui` v3, and this Studio is on UI v4, where that export is gone. Shipping a broken Studio to claim the tab would have been the fake version. The engine run is the part that is real.
+
 ## Sanity Project Details
 
 - Project ID: `gsu7qzk9`
