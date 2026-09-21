@@ -1260,8 +1260,10 @@ createServer(async (req, res) => {
       return
     }
   } catch (e) {
-    res.writeHead(500, {'Content-Type': 'application/json'})
-    res.end(JSON.stringify({answer: 'Failed.', error: String(e.message || e)}))
+    const msg = String(e.message || e)
+    const refused = /illegal|cannot|person|empty|unsigned|decidedBy stays/i.test(msg)
+    res.writeHead(refused ? 403 : 500, {'Content-Type': 'application/json'})
+    res.end(JSON.stringify({answer: 'Failed.', error: msg}))
     return
   }
   res.writeHead(404)
