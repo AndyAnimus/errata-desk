@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sign-call — the live instance</title>
+<style>
+  :root { --ink:#e8e2d4; --mute:#9a917e; --paper:#14110e; --rail:#1f1a14; --line:#3a3226; --force:#c8f07a; --stale:#ff8f6b; --accent:#f0c75e; }
+  * { box-sizing: border-box; }
+  body { margin:0; color:var(--ink); background:var(--paper); font:15px/1.5 "IBM Plex Sans","Segoe UI",system-ui,sans-serif; }
+  .wrap { max-width:42rem; margin:0 auto; padding:2rem 1.1rem 4rem; }
+  .kicker { letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-size:.72rem; margin:0 0 .4rem; }
+  h1 { font:700 2rem/1.1 "IBM Plex Serif",Georgia,serif; margin:0 0 .6rem; }
+  p { color:var(--mute); }
+  a { color:var(--accent); }
+  .panel { border:1px solid var(--line); border-radius:16px; background:var(--rail); padding:1rem 1.05rem; margin:1rem 0; }
+  .stage { font:700 1.6rem/1 "IBM Plex Serif",Georgia,serif; color:var(--force); }
+  ol { margin:.4rem 0 0; padding-left:1.2rem; }
+  li { margin:.25rem 0; }
+  button { font:600 .92rem/1 inherit; border:0; cursor:pointer; border-radius:999px; padding:.65rem 1.05rem; background:var(--ink); color:#15110c; }
+  button:disabled { opacity:.55; cursor:wait; }
+  .refused { color:var(--stale); }
+  code { color:var(--ink); }
+</style>
+<body>
+  <main class="wrap">
+    <p class="kicker">Sanity Workflows · sign-call v1</p>
+    <h1>The editor is still waiting</h1>
+    <p>This page reads the workflow instance with the desk’s editor token. A public query of the same id returns nothing, because <code>sanity.workflow.instance</code> is not on the public API. The stage below is the document, not a log we typed.</p>
+    <div class="panel" id="live">Loading the instance…</div>
+    <button id="sign" type="button">Try to sign as the editor</button>
+    <div class="panel" id="try" hidden></div>
+    <p>Studio tab, same definition: <a href="https://luis-errata-desk.sanity.studio/workflows">luis-errata-desk.sanity.studio/workflows</a>. That tab needs a project login. This page does not.</p>
+    <p><a href="./">Back to the desk</a> · <a href="needle">the dial</a></p>
+  </main>
+<script>
+const live = document.getElementById('live')
+const box = document.getElementById('try')
+function esc(s) {
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))
+}
+function line(row) {
+  const who = (row.roles || []).join(', ') || 'unknown role'
+  if (row._type === 'actionFired') return esc(row.action + ' fired by ' + who + ' while ' + row.stage)
+  if (row._type === 'transitionFired') return esc(row.fromStage + ' → ' + row.toStage + ' · ' + who)
+  if (row._type === 'stageEntered') return esc('entered ' + row.stage)
+  if (row._type === 'stageExited') return esc('left ' + row.stage)
+  if (row._type === 'activityStatusChanged') return esc(row.activity + ' ' + row.from + ' → ' + row.to)
+  return esc(row._type)
+}
+function paint(doc) {
+  if (!doc) {
+    live.innerHTML = 'No instance.'
+    return
+  }
+  const rows = (doc.history || []).map(row => '<li>' + line(row) + '</li>').join('')
+  live.innerHTML =
+    '<div class="stage">' + esc(doc.currentStage) + '</div>' +
+    '<p><code>' + esc(doc._id) + '</code><br>' + esc(doc.definition) + ' · tag ' + esc(doc.tag) + '</p>' +
+    '<ol>' + rows + '</ol>'
+}
+fetch('workflow.json').then(r => r.json()).then(paint).catch(e => { live.textContent = String(e) })
+document.getElementById('sign').onclick = async (ev) => {
+  ev.target.disabled = true
+  box.hidden = false
+  box.textContent = 'Asking the engine…'
+  try {
+    const res = await fetch('workflow/sign', {method:'POST'})
+    const data = await res.json()
+    box.innerHTML = '<p class="refused">' + esc(data.message) + '</p><p>Stage after the attempt: <b>' + esc(data.currentStage) + '</b></p>'
+    const again = await fetch('workflow.json').then(r => r.json())
+    paint(again)
+  } catch (e) {
+    box.textContent = String(e)
+  }
+  ev.target.disabled = false
+}
+</script>
+</body>
+</html>

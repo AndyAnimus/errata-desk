@@ -30,6 +30,8 @@ On June 2, Arena stays unsigned on the dial. Type a name and Sign. The agent is 
 
 No-token check: https://luiscore.com/errata-desk/check
 
+The live workflow instance, no login: https://luiscore.com/errata-desk/workflow
+
 QA battery against the live desk: `43/43`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`. The public lake holds 138 `rulesClaim` rows and 9 primary-source excerpts.
 
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
@@ -62,13 +64,19 @@ The session embed is a Codex run that curled the public calls list and named the
 
 ## Sanity Workflows
 
-The homemade gate was not the product Brawndo shipped. I installed `@sanity/workflow-engine` and `@sanity/workflow-cli` at 0.33.0, the same early-access stack, and deployed a definition named `sign-call` v1 onto `gsu7qzk9.production`.
+The homemade gate was not the product Brawndo shipped. I installed `@sanity/workflow-engine`, `@sanity/workflow-cli`, and `@sanity/workflow-studio-plugin` at 0.33.0 and deployed a definition named `sign-call` v1 onto `gsu7qzk9.production`.
 
-The definition has four stages: asked, derived, awaitingSignature, signed. Derive and hold are `editor` actions. Sign is `administrator` only. The robot token on this project is an editor. `studio/scripts/run-sign-workflow.mjs` started instance `production.wf-instance.6be7291055cc`, fired derive, fired hold, and was refused on sign: `action filter returned false`. The instance stayed on `awaitingSignature`. Workflow system documents are not in the public API, so the log of that run is a normal document judges can read with no token:
+The definition has four stages: asked, derived, awaitingSignature, signed. Derive and hold are `editor` actions. Sign is `administrator` only. The robot token on this project is an editor. It started instance `production.wf-instance.6be7291055cc`, fired derive, fired hold, and was refused on sign.
 
-https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=*[_id==%22workflow-engine-run%22][0]{title,passed,steps}
+That instance is not on the public API. The page a judge can open with no login reads it through the desk and will try the sign action again:
 
-I did not mount the Studio Workflows tab. `@sanity/workflow-studio-plugin` 0.33.0 imports `Popover` from `@sanity/ui` v3, and this Studio is on UI v4, where that export is gone. Shipping a broken Studio to claim the tab would have been the fake version. The engine run is the part that is real.
+https://luiscore.com/errata-desk/workflow
+
+The last click returned `Action "sign:sign" is not allowed: action filter returned false`, and the stage stayed `awaitingSignature`.
+
+The Studio tab is mounted: https://luis-errata-desk.sanity.studio/workflows
+
+Plugin 0.33.0 imports `Popover`, `Tooltip`, `Menu`, and `useToast` from the `@sanity/ui` barrel. Studio 6 is on UI v4, which moved those to subpaths and dropped them from the barrel. `studio/ui-compat.ts` re-exports the subpaths, and the Vite alias applies only to the exact specifier `@sanity/ui`. The tab needs a project login. The public page does not.
 
 ## Sanity Project Details
 

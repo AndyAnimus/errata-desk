@@ -867,6 +867,8 @@ const page = `<!doctype html>
     <div id="out"></div>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
+      · <a href="https://luis-errata-desk.sanity.studio/workflows" target="_blank" rel="noreferrer">Workflows</a>
+      · <a href="workflow">live instance</a>
       · Context <code>errata-desk</code>, <code>errata-sign</code>, <code>errata-sources</code>
       · <a href="check">public check</a> · EN/FR/DE/ES
     </footer>
@@ -1063,6 +1065,18 @@ function readBody(req) {
   })
 }
 
+const WORKFLOW_INSTANCE = 'production.wf-instance.6be7291055cc'
+
+async function readWorkflowInstance() {
+  const q = `*[_id=="${WORKFLOW_INSTANCE}"][0]{_id,definition,currentStage,tag,startedAt,"history":history[]{_type,stage,action,activity,from,to,fromStage,toStage,transition,"roles":actor.roles}}`
+  const res = await fetch(
+    `https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(q),
+    {headers: {Authorization: `Bearer ${TOKEN}`}},
+  )
+  const data = await res.json()
+  return data.result || null
+}
+
 createServer(async (req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Headers', 'content-type')
@@ -1168,12 +1182,55 @@ createServer(async (req, res) => {
     }
     return
   }
+  if (req.method === 'GET' && (pathOnly === '/workflow' || pathOnly === '/workflow/')) {
+    res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'})
+    res.end(readFileSync(new URL('./workflow.html', import.meta.url)))
+    return
+  }
+  if (req.method === 'GET' && pathOnly === '/workflow.json') {
+    try {
+      const doc = await readWorkflowInstance()
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify(doc))
+    } catch (e) {
+      res.writeHead(500, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({error: String(e.message || e)}))
+    }
+    return
+  }
   if (req.method === 'GET') {
     res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'})
     res.end(page)
     return
   }
   try {
+    if (req.method === 'POST' && pathOnly === '/workflow/sign') {
+      const {createClient} = await import('./studio/node_modules/@sanity/client/dist/index.js')
+      const {createEngine} = await import('./studio/node_modules/@sanity/workflow-engine/dist/index.js')
+      const client = createClient({
+        projectId: PROJECT,
+        dataset: DATASET,
+        apiVersion: '2026-04-29',
+        token: TOKEN,
+        useCdn: false,
+      })
+      const engine = createEngine({
+        client,
+        tag: 'production',
+        workflowResource: {type: 'dataset', id: `${PROJECT}.${DATASET}`},
+      })
+      let message = ''
+      try {
+        await engine.fireAction({instanceId: WORKFLOW_INSTANCE, activity: 'sign', action: 'sign'})
+        message = 'The editor token was allowed to sign. That is a failure.'
+      } catch (e) {
+        message = String(e.message || e).slice(0, 300)
+      }
+      const after = await readWorkflowInstance()
+      res.writeHead(200, {'Content-Type': 'application/json'})
+      res.end(JSON.stringify({message, currentStage: after?.currentStage || null}))
+      return
+    }
     if (req.method === 'POST' && url.startsWith('/ask')) {
       const body = await readBody(req)
       const result = await attachDecision(await answer(String(body.q || '')))
