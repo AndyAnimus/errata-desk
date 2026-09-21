@@ -28,6 +28,7 @@ The legal steps live in `workflow-sign-call`: asked → derived → awaitingSign
 node scripts/seed.mjs
 node scripts/seed-sign.mjs
 node scripts/seed-sources.mjs
+node scripts/seed-volume.mjs
 node ask-server.mjs   # http://127.0.0.1:8791
 ```
 

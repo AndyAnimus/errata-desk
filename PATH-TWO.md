@@ -26,7 +26,7 @@ On June 2, Arena stays unsigned on the dial. Type a name and Sign. The agent is 
 
 No-token check: https://luiscore.com/errata-desk/check
 
-QA battery against the live desk: `14/14`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`.
+QA battery against the live desk: `43/43`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`. The public lake holds 138 `rulesClaim` rows and 9 primary-source excerpts.
 
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
 

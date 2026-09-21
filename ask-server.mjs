@@ -1,6 +1,7 @@
 import {createServer} from 'node:http'
 import {readFileSync} from 'node:fs'
 import {assertTransition} from './workflow.mjs'
+import {cardAliases} from './scripts/volume-data.mjs'
 
 const OLLAMA = 'http://127.0.0.1:11434/api/chat'
 const MODEL = 'qwen2.5:7b-instruct-q4_K_M'
@@ -68,7 +69,7 @@ function platformOf(low) {
 
 function detectLang(text) {
   const low = text.toLowerCase()
-  if (/[äöüß]|\b(zwei|tage|bevor|zahle|spiele|außerhalb|verboten|ist\s+fires|gefäh)/.test(low)) return 'de'
+  if (/[äöüß]|\b(zwei|tage|bevor|zahle|spiele|außerhalb|verboten|suspendiert|gebannt|gefäh)|\bist\b/.test(low)) return 'de'
   if (/[àâçéèêëïôùû]|\b(jours?|avant|payez|jouez|banni|est-il|sur arena|compagnon)/.test(low)) return 'fr'
   if (/[áéíóúñ¿¡]|\b(días|antes|pago|lanzo|prohibido|compañero)/.test(low)) return 'es'
   return 'en'
@@ -106,8 +107,22 @@ function localizeShell(lang, kind, bits) {
 
 function banSubject(text) {
   const low = text.toLowerCase()
-  if (/fires of invention|fires\b/.test(low)) return 'fires-of-invention'
-  if (/agent of treachery|agent\b/.test(low)) return 'agent-of-treachery'
+  for (const [alias, subject] of cardAliases()) {
+    if (low.includes(alias)) return subject
+  }
+  return null
+}
+
+function formatOf(text) {
+  const low = text.toLowerCase()
+  if (/historic|historique|histórico|historico|historisch/.test(low)) return 'legalInHistoric'
+  if (/\bbrawl\b/.test(low)) return 'legalInBrawl'
+  if (/\bpioneer\b/.test(low)) return 'legalInPioneer'
+  if (/\bmodern\b|\bmoderne\b|\bmoderno\b/.test(low)) return 'legalInModern'
+  if (/\blegacy\b|\blegado\b/.test(low)) return 'legalInLegacy'
+  if (/\bvintage\b/.test(low)) return 'legalInVintage'
+  if (/\bpauper\b/.test(low)) return 'legalInPauper'
+  if (/\bstandard\b|\bestándar\b|\bestandar\b/.test(low)) return 'legalInStandard'
   return null
 }
 
@@ -385,11 +400,32 @@ function wantsCompare(text) {
 }
 
 function askedDate(text) {
-  const low = text.toLowerCase()
-  const named = low.match(/\b(?:june|jun)\s+(\d{1,2})\b/)
-  if (named) return `2020-06-${String(Number(named[1])).padStart(2, '0')}`
-  const iso = low.match(/\b(2020-06-\d{2})\b/)
-  if (iso) return iso[1]
+  const low = text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+  const iso = low.match(/\b(20\d{2})-(\d{2})-(\d{2})\b/)
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
+  const months = {
+    january: 1, janvier: 1, januar: 1, enero: 1,
+    february: 2, fevrier: 2, februar: 2, febrero: 2,
+    march: 3, mars: 3, marz: 3, marzo: 3,
+    april: 4, avril: 4, abril: 4,
+    may: 5, mai: 5, mayo: 5,
+    june: 6, jun: 6, juin: 6, juni: 6, junio: 6,
+    july: 7, juillet: 7, juli: 7, julio: 7,
+    august: 8, aout: 8, agosto: 8,
+    september: 9, septembre: 9, septiembre: 9,
+    october: 10, octobre: 10, oktober: 10, octubre: 10,
+    november: 11, novembre: 11, noviembre: 11,
+    december: 12, decembre: 12, dezember: 12, diciembre: 12,
+  }
+  const names = Object.keys(months).join('|')
+  const pad = (y, m, d) => `${y}-${String(m).padStart(2, '0')}-${String(Number(d)).padStart(2, '0')}`
+  let m = low.match(new RegExp(`\\b(${names})\\s+(\\d{1,2})(?!\\d)(?:st|nd|rd|th)?(?:\\s*,?\\s*(20\\d{2}))?`))
+  if (m) return pad(m[3] || '2020', months[m[1]], m[2])
+  m = low.match(new RegExp(`\\b(\\d{1,2})\\.?\\s+(?:de\\s+)?(${names})(?:\\s+(?:de\\s+)?(20\\d{2}))?`))
+  if (m) return pad(m[3] || '2020', months[m[2]], m[1])
   return null
 }
 
@@ -440,16 +476,20 @@ async function answer(text) {
     detail: typeof ctx.text === 'string' ? ctx.text.slice(0, 180) : 'schema + instructions loaded',
   })
 
-  const clocks = await mcp('array_field_reader', {
-    mode: 'range',
-    documentId: ban ? 'rules-change-standard-bans' : 'rules-change-companion',
-    field: 'clocks',
-    range: {startIndex: 0, endIndex: 3},
-  })
-  tools.push({
-    name: 'array_field_reader',
-    detail: ban ? 'rules-change-standard-bans.clocks' : 'rules-change-companion.clocks[0…3]',
-  })
+  const clocks = ban
+    ? null
+    : await mcp('array_field_reader', {
+        mode: 'range',
+        documentId: 'rules-change-companion',
+        field: 'clocks',
+        range: {startIndex: 0, endIndex: 3},
+      })
+  if (!ban) {
+    tools.push({
+      name: 'array_field_reader',
+      detail: 'rules-change-companion.clocks[0…3]',
+    })
+  }
 
   try {
     const srcQ = `*[_type=="sourceDoc"]|order(title)[0...3]{title,sourceUrl,about}`
@@ -475,30 +515,49 @@ async function answer(text) {
     tools.push({name: 'groq_query', detail: 'semantic search not ready'})
   }
 
-  if (ban && (platform || date || compareDate || askedDate(text))) {
+  if (ban && (platform || date || compareDate || askedDate(text) || platformOf(text.toLowerCase()))) {
     const day = date || compareDate || askedDate(text) || known?.date
-    const plat = platform || platformOf(text.toLowerCase()) || 'arena'
+    const wanted = formatOf(text)
+    const arenaOnly = wanted === 'legalInHistoric' || wanted === 'legalInBrawl' || !wanted
+    const plat =
+      platform ||
+      platformOf(text.toLowerCase()) ||
+      (arenaOnly ? 'arena' : 'tabletop')
     if (day) {
-      const claimsQ = `*[_type=="rulesClaim" && subject=="${ban}" && platform=="${plat}"]{_id,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl}`
+      const predFilter = wanted ? ` && predicate=="${wanted}"` : ''
+      const claimsQ = `*[_type=="rulesClaim" && subject=="${ban}" && platform=="${plat}"${predFilter}]{_id,status,predicate,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl,clockDoc}`
       const claimsRaw = await mcp('groq_query', {query: claimsQ})
       tools.push({name: 'groq_query', detail: claimsQ})
       const rows = unpack(claimsRaw)
       const list = Array.isArray(rows) ? rows : []
       const {inForce, notInForce} = split(list, day)
       const top = inForce[0]
+      const clockDoc = top?.clockDoc || list[0]?.clockDoc || 'rules-change-standard-bans'
+      const banClocks = await mcp('array_field_reader', {
+        mode: 'range',
+        documentId: clockDoc,
+        field: 'clocks',
+        range: {startIndex: 0, endIndex: 3},
+      })
+      tools.push({name: 'array_field_reader', detail: clockDoc + '.clocks'})
       const value = pickValue(top, lang)
       return {
         lang,
         reading: known?.reading || parsed.reading || ban,
         platform: plat,
         date: day,
-        answer: localizeShell(lang, 'derived', {platform: plat, date: day, value}),
+        answer: localizeShell(lang, 'derived', {
+          platform: plat,
+          date: day,
+          value: value || 'No claim covers this day.',
+        }),
         inForce: inForce.map((c) => ({...c, value: pickValue(c, lang)})),
         notInForce: notInForce.map((c) => ({...c, value: pickValue(c, lang)})),
         tools,
-        clocks: unpack(clocks),
+        clocks: unpack(banClocks),
         similar,
         subject: ban,
+        predicate: wanted || top?.predicate || null,
       }
     }
   }

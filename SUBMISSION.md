@@ -34,7 +34,17 @@ Studio: https://luis-errata-desk.sanity.studio/
 
 Sign board (App SDK): https://luiscore.com/errata-desk/app/
 
-Judge prompts that pass right now (battery `14/14`, workflow timed run `8/8`):
+Judge prompts that pass right now (battery `43/43`, workflow timed run `8/8`). The lake is 138 `rulesClaim` rows and 9 `sourceDoc` excerpts, each claim carrying `valueFr` / `valueDe` / `valueEs`.
+
+Companion clocks, plus the printed clocks from these announcements (no invented dates):
+
+- March 9, 2020 — tabletop/Magic Online March 10, Arena March 12
+- May 18, 2020 — tabletop/Magic Online May 18, Arena May 21
+- June 1, 2020 — companion and Standard bans (Arena June 4, Magic Online companion June 3)
+- July 13, 2020 — tabletop/Magic Online July 13, Arena July 16
+- August 3, September 28, and October 12, 2020 — one effective date, named on the page
+
+Historic and Brawl stay Arena-only. Pioneer, Modern, Legacy, Vintage, and Pauper stay tabletop and Magic Online. Same card can be banned in one format and only suspended in another (Omnath on October 12).
 
 1. `two days before Arena switched, do I pay 3 or cast it from outside the game?`
 2. `On paper, June 2 2020 — pay 3 or cast from outside the game?`
@@ -43,6 +53,9 @@ Judge prompts that pass right now (battery `14/14`, workflow timed run `8/8`):
 5. `Deux jours avant qu'Arena change, est-ce que je paie 3 ou je joue depuis l'extérieur ?`
 6. `Zwei Tage bevor Arena umgestellt hat: zahle ich 3 oder spiele ich von außerhalb?`
 7. `On Arena, June 2 2020, is Fires of Invention banned in Standard?`
+8. `On Arena, March 11 2020, is Oko banned in Historic?`
+9. `On Arena, May 19 2020, is Winota banned in Brawl?`
+10. `On Arena, October 12 2020, is Omnath suspended in Historic?`
 
 Public dataset (no token):
 

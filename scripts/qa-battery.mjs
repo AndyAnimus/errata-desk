@@ -97,6 +97,141 @@ const cases = [
       /legal|noch|aún|encore|until/i.test(d.answer + JSON.stringify(d.inForce || [])),
   },
   {
+    name: 'oko-arena-march11',
+    q: 'On Arena, March 11 2020, is Oko banned in Historic?',
+    expect: (d) => d.subject === 'oko-thief-of-crowns' && d.date === '2020-03-11' && /suspended|suspendu/i.test(d.answer || ''),
+  },
+  {
+    name: 'golos-arena-march11',
+    q: 'On Arena, March 11 2020, is Golos banned in Brawl?',
+    expect: (d) => d.date === '2020-03-11' && /legal|légal|until|horloge/i.test(d.answer || ''),
+  },
+  {
+    name: 'winota-brawl-may19-de',
+    q: 'Ist Winota am 19. Mai 2020 in Brawl auf Arena gebannt?',
+    expect: (d) => d.date === '2020-05-19' && d.platform === 'arena' && /legal|noch/i.test(d.answer || ''),
+  },
+  {
+    name: 'lurrus-legacy-may18',
+    q: 'On paper, May 18 2020, is Lurrus banned in Legacy?',
+    expect: (d) => d.date === '2020-05-18' && d.platform === 'tabletop' && /banned in legacy/i.test(d.answer || ''),
+  },
+  {
+    name: 'zirda-legacy-may18',
+    q: 'On paper, May 18 2020, is Zirda banned in Legacy?',
+    expect: (d) => d.date === '2020-05-18' && /banned in legacy/i.test(d.answer || ''),
+  },
+  {
+    name: 'drannith-brawl-may20',
+    q: 'On Arena, May 20 2020, is Drannith Magistrate banned in Brawl?',
+    expect: (d) => d.date === '2020-05-20' && /legal|until/i.test(d.answer || ''),
+  },
+  {
+    name: 'nexus-july15',
+    q: 'On Arena, July 15 2020, is Nexus of Fate banned in Historic?',
+    expect: (d) => d.date === '2020-07-15' && /legal|until/i.test(d.answer || ''),
+  },
+  {
+    name: 'agent-historic-july15',
+    q: 'On Arena, July 15 2020, is Agent of Treachery suspended in Historic?',
+    expect: (d) => d.date === '2020-07-15' && /suspended/i.test(d.answer || ''),
+  },
+  {
+    name: 'agent-historic-july16',
+    q: 'On Arena, July 16 2020, is Agent of Treachery banned in Historic?',
+    expect: (d) => d.date === '2020-07-16' && /banned in historic/i.test(d.answer || ''),
+  },
+  {
+    name: 'burning-tree-july16',
+    q: 'On Arena, July 16 2020, is Burning-Tree Emissary suspended in Historic?',
+    expect: (d) => d.date === '2020-07-16' && /suspended/i.test(d.answer || ''),
+  },
+  {
+    name: 'arcum-modern-july13',
+    q: "On paper, July 13 2020, is Arcum's Astrolabe banned in Modern?",
+    expect: (d) => d.date === '2020-07-13' && d.platform === 'tabletop' && /banned in modern/i.test(d.answer || ''),
+  },
+  {
+    name: 'expedition-pauper-july13',
+    q: 'On paper, July 13 2020, is Expedition Map banned in Pauper?',
+    expect: (d) => d.date === '2020-07-13' && /banned in pauper/i.test(d.answer || ''),
+  },
+  {
+    name: 'oath-pioneer-july13',
+    q: 'On paper, July 13 2020, is Oath of Nissa unbanned in Pioneer?',
+    expect: (d) => d.date === '2020-07-13' && /unbanned|legal/i.test(d.answer || ''),
+  },
+  {
+    name: 'growth-spiral-aug2-es',
+    q: 'El 2 de agosto de 2020, en papel, ¿Growth Spiral está prohibido en Standard?',
+    expect: (d) => d.date === '2020-08-02' && d.platform === 'tabletop' && /legal|aún|hasta/i.test(d.answer || ''),
+  },
+  {
+    name: 'cauldron-aug3',
+    q: 'On Arena, August 3 2020, is Cauldron Familiar banned in Standard?',
+    expect: (d) => d.date === '2020-08-03' && /banned in standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'kethis-aug2',
+    q: 'On paper, August 2 2020, is Kethis banned in Pioneer?',
+    expect: (d) => d.date === '2020-08-02' && /legal|until/i.test(d.answer || ''),
+  },
+  {
+    name: 'inverter-aug3',
+    q: 'On paper, August 3 2020, is Inverter of Truth banned in Pioneer?',
+    expect: (d) => d.date === '2020-08-03' && /banned in pioneer/i.test(d.answer || ''),
+  },
+  {
+    name: 'breach-legacy-march10',
+    q: 'On paper, March 10 2020, is Underworld Breach banned in Legacy?',
+    expect: (d) => d.date === '2020-03-10' && /banned in legacy/i.test(d.answer || ''),
+  },
+  {
+    name: 'breach-pioneer-aug3',
+    q: 'On paper, August 3 2020, is Underworld Breach banned in Pioneer?',
+    expect: (d) => d.date === '2020-08-03' && /banned in pioneer/i.test(d.answer || ''),
+  },
+  {
+    name: 'once-modern-march10',
+    q: 'On paper, March 10 2020, is Once Upon a Time banned in Modern?',
+    expect: (d) => d.date === '2020-03-10' && /banned in modern/i.test(d.answer || ''),
+  },
+  {
+    name: 'teferi-standard-aug3-fr',
+    q: 'Le 3 août 2020, sur la table, Teferi est-il banni en Standard ?',
+    expect: (d) => d.date === '2020-08-03' && d.platform === 'tabletop' && /banni en standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'wilderness-historic-aug3-de',
+    q: 'Ist Wilderness Reclamation am 3. August 2020 im Historic auf Arena suspendiert?',
+    expect: (d) => d.date === '2020-08-03' && d.platform === 'arena' && /suspendiert|suspended/i.test(d.answer || ''),
+  },
+  {
+    name: 'uro-sep28',
+    q: 'On Arena, September 28 2020, is Uro banned in Standard?',
+    expect: (d) => d.date === '2020-09-28' && /banned in standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'omnath-historic-oct12',
+    q: 'On Arena, October 12 2020, is Omnath suspended in Historic?',
+    expect: (d) => d.date === '2020-10-12' && /suspended in historic/i.test(d.answer || ''),
+  },
+  {
+    name: 'omnath-brawl-oct12',
+    q: 'On Arena, October 12 2020, is Omnath banned in Brawl?',
+    expect: (d) => d.date === '2020-10-12' && /banned in brawl/i.test(d.answer || ''),
+  },
+  {
+    name: 'field-unban-march12',
+    q: 'On Arena, March 12 2020, is Field of the Dead legal in Historic?',
+    expect: (d) => d.date === '2020-03-12' && /unbanned|legal/i.test(d.answer || ''),
+  },
+  {
+    name: 'oko-march11-fr',
+    q: 'Le 11 mars 2020, sur Arena, Oko est-il suspendu en Historique ?',
+    expect: (d) => d.date === '2020-03-11' && /suspendu/i.test(d.answer || ''),
+  },
+  {
     name: 'sources-mcp',
     q: 'two days before Arena switched',
     expect: (d) => (d.tools || []).some((t) => /errata-sources|sourceDoc/i.test(t.name + ' ' + (t.detail || ''))),
@@ -106,6 +241,16 @@ const cases = [
     get: '/calls',
     expect: (rows) => Array.isArray(rows) && rows.length >= 5,
   },
+  {
+    name: 'lake-claims',
+    abs: 'https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22rulesClaim%22])',
+    expect: (d) => Number(d.result) >= 100,
+  },
+  {
+    name: 'lake-sources',
+    abs: 'https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22sourceDoc%22])',
+    expect: (d) => Number(d.result) >= 8,
+  },
 ]
 
 async function run() {
@@ -113,7 +258,12 @@ async function run() {
   for (const c of cases) {
     const t0 = Date.now()
     try {
-      if (c.get) {
+      if (c.abs) {
+        const res = await fetch(c.abs)
+        const data = await res.json()
+        const ok = c.expect(data)
+        results.push({name: c.name, ok, ms: Date.now() - t0, note: String(data.result ?? '')})
+      } else if (c.get) {
         const res = await fetch(BASE + c.get)
         const data = await res.json()
         const ok = c.expect(data)
