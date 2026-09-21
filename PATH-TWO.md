@@ -6,7 +6,13 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 *This is a submission for the [Sanity Challenge, Path Two: Vibe-Code Something Strange](https://dev.to/challenges/sanity-2026-09-16)*
 
-Open https://luiscore.com/errata-desk/score first if you want every Path Two probe in one click. Then https://luiscore.com/errata-desk/needle. It starts on June 3: tabletop and Magic Online have switched, Arena has not. Turn to June 2 and sign the Arena case with a name — or click Try as agent and watch the refuse. The same unsigned case is on the App SDK board: https://luiscore.com/errata-desk/app/. The live Workflows instance is https://luiscore.com/errata-desk/workflow.
+No login on the dial, the board, the scorecard, or the workflow page. The Studio Workflows tab needs a project seat. Start here:
+
+1. https://luiscore.com/errata-desk/needle — opens on June 3. Tabletop and Magic Online have switched. Arena has not.
+2. Turn to June 2. Sign with a name, or click **Try as agent**. The agent is refused. `decidedBy` stays empty.
+3. https://luiscore.com/errata-desk/workflow — the official Workflows instance. The editor token is refused on sign. Stage stays `awaitingSignature`.
+4. https://luiscore.com/errata-desk/app/ — App SDK board. Unsigned fields render as a dash.
+5. https://luiscore.com/errata-desk/score — the same probes, one click.
 
 Project `gsu7qzk9`, dataset `production` (public).
 
@@ -85,8 +91,14 @@ Plugin 0.33.0 imports `Popover`, `Tooltip`, `Menu`, and `useToast` from the `@sa
 - Project ID: `gsu7qzk9`
 - Dataset: `production` (public)
 - Organization: `o4kqib00c`
+- Public query: https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22rulesClaim%22])
 - Studio: https://luis-errata-desk.sanity.studio/
+- Studio Workflows tab (project login): https://luis-errata-desk.sanity.studio/workflows
 - Needle: https://luiscore.com/errata-desk/needle
+- Scorecard: https://luiscore.com/errata-desk/score
+- Workflow instance: https://luiscore.com/errata-desk/workflow
+- App SDK board: https://luiscore.com/errata-desk/app/
+- Repo: https://github.com/AndyAnimus/errata-desk
 - Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true
 - Sources MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources
 - Sign MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign

@@ -6,15 +6,15 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 *This is a submission for the [Sanity Challenge, Path One: Ship an Agent That Queries Real Content](https://dev.to/challenges/sanity-2026-09-16)*
 
-Open these, in order. No login.
+No login. The desk asks itself. Open these, in order:
 
-1. https://luiscore.com/errata-desk/score — live probes for both paths (lake, June 2 split, unsigned case, Needle June 3, FR, Field clocks, agent refuse, Workflows editor refuse).
-2. https://luiscore.com/errata-desk/ — the page asks itself. Arena on June 2 is still “cast from outside the game.” The pay-3 claim is on screen, labeled not in force.
-3. https://luiscore.com/errata-desk/needle — turn to June 3. Tabletop and Magic Online have switched. Arena has not. On June 2, try Sign and Try as agent.
-4. https://luiscore.com/errata-desk/workflow — editor token refused on sign; stage stays awaitingSignature.
-5. https://luiscore.com/errata-desk/check — companion June 2 split only, no token (small JSON).
-6. https://luiscore.com/errata-desk/app/ — App SDK board, unsigned dashes.
-7. Studio Workflows: https://luis-errata-desk.sanity.studio/workflows
+1. https://luiscore.com/errata-desk/ — Arena on June 2 is still “cast from outside the game.” The pay-3 claim is on screen, labeled not in force.
+2. https://luiscore.com/errata-desk/needle — June 3. Tabletop and Magic Online have switched. Arena has not.
+3. https://luiscore.com/errata-desk/check — the same companion split, public GROQ, no token.
+4. https://luiscore.com/errata-desk/score — every live probe in one click.
+5. https://luiscore.com/errata-desk/workflow — Sanity Workflows. The editor cannot sign.
+6. https://luiscore.com/errata-desk/app/ — App SDK board. Unsigned fields are dashes.
+7. Studio: https://luis-errata-desk.sanity.studio/ — the Workflows tab needs a project login: https://luis-errata-desk.sanity.studio/workflows
 
 Project `gsu7qzk9`, dataset `production` (public).
 
@@ -34,7 +34,7 @@ The agent only keeps a `rulesClaim` whose `platform` matches and whose `effectiv
 
 Then you can **bind the call**. That writes a `ruling` document for that platform and day. The next ask returns the standing ruling from the lake instead of deriving again — the challenge line about a decision carrying across future builds, as an actual write.
 
-The public dataset holds the procedure claims, the three clocks, and nine desk calls written for this entry. Each call is a question a keyword search gets wrong, with the finding stored next to the date. Card images are not the product.
+The public dataset holds the procedure claims, the three clocks, and the worked calls written for this entry. Each call is a question a keyword search gets wrong, with the finding stored next to the date. Card images are not the product.
 
 ## Demo
 
@@ -127,7 +127,7 @@ Schema in the deployed Studio:
 
 ## How I Used Sanity
 
-Two Context endpoints, not one.
+Three Context endpoints on one public dataset. No login on the desk.
 
 - `errata-desk` reads the clocks, the claims, and the worked calls. Embeddings are on.
 - `errata-sign` can see only `deskCase`. Its instructions say: if `decidedBy` or `decidedAt` is missing, the case is unsigned. Do not invent a signer.
@@ -146,7 +146,7 @@ The App SDK board reads the same cases live: https://luiscore.com/errata-desk/ap
 - Context MCP, signature: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign`
 - Context MCP, sources: `https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources`
 
-Source for every quote: the June 1, 2020 Banned and Restricted Announcement, which states the new companion rule and the three effective dates.
+Companion clocks are the June 1, 2020 Banned and Restricted Announcement. Every later ban in the lake is a later printed announcement, with the date that page names for that platform. Nothing is invented.
 
 What most entries show: an agent that answers. What this one adds: three clocks for one sentence, both claims on screen with sources, and a bind that writes the decision back into the lake.
 
@@ -181,8 +181,15 @@ Keyword search returns both sentences. The chart shows why they are not a contra
 - Project ID: `gsu7qzk9`
 - Dataset: `production` (public)
 - Organization: `o4kqib00c`
+- Public query: https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22rulesClaim%22])
 - Studio: https://luis-errata-desk.sanity.studio/
+- Studio Workflows tab (project login): https://luis-errata-desk.sanity.studio/workflows
+- Judge scorecard (no login): https://luiscore.com/errata-desk/score
 - Live desk: https://luiscore.com/errata-desk/
+- Needle: https://luiscore.com/errata-desk/needle
+- Workflow instance: https://luiscore.com/errata-desk/workflow
+- App SDK board: https://luiscore.com/errata-desk/app/
 - Repo: https://github.com/AndyAnimus/errata-desk
-- Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk
-- Public query: https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=*[_type==%22rulesClaim%22]
+- Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true
+- Sources MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources
+- Sign MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sign
