@@ -63,10 +63,17 @@ June 1 2020 Ian Duke announcement:
 - Standard bans (Fires of Invention, Agent of Treachery): tabletop and Magic Online 2020-06-01, Arena 2020-06-04
 
 Later announcements in this lake, each with its own printed clocks:
+- 2019-01-21 tabletop January 25, Magic Online January 21
+- 2019-10-21 Magic Online October 21, Arena October 24, tabletop October 25
+- 2019-11-18 Arena and Magic Online November 18, tabletop November 22
+- 2019-12-16 Pioneer tabletop and Magic Online December 17
+- 2020-01-13 Modern tabletop and Magic Online January 14
 - 2020-03-09 tabletop/Magic Online March 10, Arena March 12
+- 2020-04-13 Brawl April 16 on every platform named
 - 2020-05-18 tabletop/Magic Online May 18, Arena May 21
 - 2020-07-13 tabletop/Magic Online July 13, Arena July 16
-- 2020-08-03, 2020-09-28, 2020-10-12: one effective date for every platform the page names
+- 2020-08-03, 2020-09-28, 2020-10-12, 2021-02-15: one effective date for every platform the page names
+- 2021-06-09 Historic Arena June 10
 
 Historic and Brawl claims are Arena-only. Pioneer, Modern, Legacy, Vintage, and Pauper claims are tabletop and Magic Online only. Do not invent a platform the announcement does not name.
 

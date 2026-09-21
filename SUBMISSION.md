@@ -43,15 +43,23 @@ Studio: https://luis-errata-desk.sanity.studio/
 
 Sign board (App SDK): https://luiscore.com/errata-desk/app/
 
-Judge prompts that pass right now (battery `43/43`, workflow timed run `8/8`). The lake is 138 `rulesClaim` rows and 9 `sourceDoc` excerpts, each claim carrying `valueFr` / `valueDe` / `valueEs`.
+Judge prompts that pass right now (battery `54/54`, workflow timed run `8/8`). The lake is 272 `rulesClaim` rows and 17 `sourceDoc` excerpts from printed Wizards B&R pages (2019–2021), each claim carrying `valueFr` / `valueDe` / `valueEs`.
 
 Companion clocks, plus the printed clocks from these announcements (no invented dates):
 
+- January 21, 2019 — Magic Online January 21, tabletop January 25 (Modern Ironworks)
+- October 21, 2019 — Magic Online October 21, Arena October 24, tabletop October 25 (Field of the Dead)
+- November 18, 2019 — Arena and Magic Online November 18, tabletop November 22 (Oko Standard)
+- December 16, 2019 — Pioneer tabletop and Magic Online December 17
+- January 13, 2020 — Modern tabletop and Magic Online January 14
 - March 9, 2020 — tabletop/Magic Online March 10, Arena March 12
+- April 13, 2020 — Brawl Lutri April 16
 - May 18, 2020 — tabletop/Magic Online May 18, Arena May 21
 - June 1, 2020 — companion and Standard bans (Arena June 4, Magic Online companion June 3)
 - July 13, 2020 — tabletop/Magic Online July 13, Arena July 16
 - August 3, September 28, and October 12, 2020 — one effective date, named on the page
+- February 15, 2021 — one effective date across Historic, Pioneer, Modern, Legacy, Vintage
+- June 9, 2021 — Historic Time Warp, Arena June 10
 
 Historic and Brawl stay Arena-only. Pioneer, Modern, Legacy, Vintage, and Pauper stay tabletop and Magic Online. Same card can be banned in one format and only suspended in another (Omnath on October 12).
 
@@ -65,6 +73,9 @@ Historic and Brawl stay Arena-only. Pioneer, Modern, Legacy, Vintage, and Pauper
 8. `On Arena, March 11 2020, is Oko banned in Historic?`
 9. `On Arena, May 19 2020, is Winota banned in Brawl?`
 10. `On Arena, October 12 2020, is Omnath suspended in Historic?`
+11. `On Arena, October 23 2019, is Field of the Dead banned in Standard?`
+12. `On paper, November 20 2019, is Oko banned in Standard?`
+13. `On Arena, June 10 2021, is Time Warp banned in Historic?`
 
 Public dataset (no token):
 
@@ -85,7 +96,7 @@ Every ask hits the hosted Sanity Context MCP for this Knowledge Base, not a priv
 
 1. `initial_context` — schema + instructions
 2. `array_field_reader` — `rules-change-companion.clocks` (or the Standard-ban clocks)
-3. `errata-sources` — primary-source `sourceDoc` rows from the June 1, 2020 announcement
+3. `errata-sources` — primary-source `sourceDoc` rows from printed Wizards B&R announcements (2019–2021)
 4. `groq_query` — standing `ruling` first, then `rulesClaim` rows for that platform (with `valueFr` / `valueDe` / `valueEs` when the ask is in that language)
 5. Window filter in code — the model never invents which claim is in force
 6. Optional `POST /rule` — writes `ruling-{platform}-{date}` so the next ask is bound
@@ -117,7 +128,7 @@ Two Context endpoints, not one.
 
 - `errata-desk` reads the clocks, the claims, and the worked calls. Embeddings are on.
 - `errata-sign` can see only `deskCase`. Its instructions say: if `decidedBy` or `decidedAt` is missing, the case is unsigned. Do not invent a signer.
-- `errata-sources` can see only `sourceDoc` — primary-source excerpts from the June 1, 2020 B&R announcement (companion clocks + Standard bans). Same lake, third Context endpoint.
+- `errata-sources` can see only `sourceDoc` — primary-source excerpts from printed Wizards B&R announcements (2019–2021). Same lake, third Context endpoint.
 
 Ask "two days before Arena switched". The first endpoint returns the old reminder. The second returns `case-arena-2020-06-02` with `decidedBy: null` and `decidedAt: null`. Binding the call does not fill those fields. Signing does, and only with a name. Ban asks (Fires / Agent) hit the same clocks and the sources MCP.
 

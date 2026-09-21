@@ -242,14 +242,69 @@ const cases = [
     expect: (rows) => Array.isArray(rows) && rows.length >= 5,
   },
   {
+    name: 'field-arena-oct23',
+    q: 'On Arena, October 23 2019, is Field of the Dead banned in Standard?',
+    expect: (d) => d.date === '2019-10-23' && /still legal|until the platform/i.test(d.answer || ''),
+  },
+  {
+    name: 'field-arena-oct24',
+    q: 'On Arena, October 24 2019, is Field of the Dead banned in Standard?',
+    expect: (d) => d.date === '2019-10-24' && /banned in standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'oko-paper-nov20',
+    q: 'On paper, November 20 2019, is Oko banned in Standard?',
+    expect: (d) => d.date === '2019-11-20' && /still legal|until the platform/i.test(d.answer || ''),
+  },
+  {
+    name: 'oko-arena-nov18',
+    q: 'On Arena, November 18 2019, is Oko banned in Standard?',
+    expect: (d) => d.date === '2019-11-18' && /banned in standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'ironworks-mtgo-jan21',
+    q: 'On Magic Online, January 21 2019, is Krark-Clan Ironworks banned in Modern?',
+    expect: (d) => d.date === '2019-01-21' && /banned in modern/i.test(d.answer || ''),
+  },
+  {
+    name: 'ironworks-paper-jan21',
+    q: 'On paper, January 21 2019, is Krark-Clan Ironworks banned in Modern?',
+    expect: (d) => d.date === '2019-01-21' && /still legal|until the platform/i.test(d.answer || ''),
+  },
+  {
+    name: 'lutri-arena-apr16',
+    q: 'On Arena, April 16 2020, is Lutri banned in Brawl?',
+    expect: (d) => d.date === '2020-04-16' && /banned in brawl/i.test(d.answer || ''),
+  },
+  {
+    name: 'time-warp-june9',
+    q: 'On Arena, June 9 2021, is Time Warp banned in Historic?',
+    expect: (d) => d.date === '2021-06-09' && /still legal|until the platform/i.test(d.answer || ''),
+  },
+  {
+    name: 'time-warp-june10',
+    q: 'On Arena, June 10 2021, is Time Warp banned in Historic?',
+    expect: (d) => d.date === '2021-06-10' && /banned in historic/i.test(d.answer || ''),
+  },
+  {
+    name: 'lucky-clover-oct12',
+    q: 'On Arena, October 12 2020, is Lucky Clover banned in Standard?',
+    expect: (d) => d.date === '2020-10-12' && /banned in standard/i.test(d.answer || ''),
+  },
+  {
+    name: 'uro-modern-feb15',
+    q: 'On paper, February 15 2021, is Uro banned in Modern?',
+    expect: (d) => d.date === '2021-02-15' && /banned in modern/i.test(d.answer || ''),
+  },
+  {
     name: 'lake-claims',
     abs: 'https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22rulesClaim%22])',
-    expect: (d) => Number(d.result) >= 100,
+    expect: (d) => Number(d.result) >= 240,
   },
   {
     name: 'lake-sources',
     abs: 'https://gsu7qzk9.api.sanity.io/v2021-10-21/data/query/production?query=count(*[_type==%22sourceDoc%22])',
-    expect: (d) => Number(d.result) >= 8,
+    expect: (d) => Number(d.result) >= 14,
   },
 ]
 

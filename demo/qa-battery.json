@@ -1,266 +1,332 @@
 {
-  "ranAt": "2026-09-21T06:07:53.188Z",
+  "ranAt": "2026-09-21T07:52:16.295Z",
   "base": "http://127.0.0.1:8791",
-  "passed": 43,
+  "passed": 54,
   "failed": 0,
-  "total": 43,
+  "total": 54,
   "results": [
     {
       "name": "arena-minus-two",
       "ok": true,
-      "ms": 1733,
+      "ms": 2005,
       "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "paper-june-2",
       "ok": true,
-      "ms": 1716,
+      "ms": 4423,
       "note": "Derived, not yet ruled. On 2020-06-02, tabletop: Pay 3 generic mana to put the c"
     },
     {
       "name": "june-3-compare",
       "ok": true,
-      "ms": 2354,
+      "ms": 2293,
       "note": "On 2020-06-03 the three tables are not on the same sentence."
     },
     {
       "name": "june-4-compare",
       "ok": true,
-      "ms": 1841,
+      "ms": 3169,
       "note": "On 2020-06-04 the three tables are not on the same sentence."
     },
     {
       "name": "spanish-arena",
       "ok": true,
-      "ms": 1884,
+      "ms": 5515,
       "note": "Decisión guardada. El 2020-06-02, arena: Lanza el compañero una vez desde fuera "
     },
     {
       "name": "semantic-tool",
       "ok": true,
-      "ms": 2037,
+      "ms": 2617,
       "note": "On 2020-06-02 the three tables are not on the same sentence."
     },
     {
       "name": "unsigned-fields",
       "ok": true,
-      "ms": 1711,
+      "ms": 2147,
       "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "agent-cannot-sign",
       "ok": true,
-      "ms": 60,
+      "ms": 50,
       "note": "illegal: agent cannot move awaitingSignature → signed"
     },
     {
       "name": "blank-sign-refused",
       "ok": true,
-      "ms": 4,
+      "ms": 3,
       "note": "a person has to sign. decidedBy stays empty"
     },
     {
       "name": "french-arena",
       "ok": true,
-      "ms": 1760,
+      "ms": 2745,
       "note": "Décision enregistrée. Le 2020-06-02, arena: Jouez le compagnon une fois depuis l"
     },
     {
       "name": "german-arena",
       "ok": true,
-      "ms": 1991,
+      "ms": 8622,
       "note": "Gespeicherte Entscheidung. Am 2020-06-02, arena: Spiele den Gefährten einmal von"
     },
     {
       "name": "fires-arena-june2",
       "ok": true,
-      "ms": 1825,
+      "ms": 1573,
       "note": "Derived, not yet ruled. On 2020-06-02, arena: Still legal in Standard until the "
     },
     {
       "name": "oko-arena-march11",
       "ok": true,
-      "ms": 1742,
+      "ms": 1855,
       "note": "Derived, not yet ruled. On 2020-03-11, arena: Suspended in Historic."
     },
     {
       "name": "golos-arena-march11",
       "ok": true,
-      "ms": 1652,
+      "ms": 1760,
       "note": "Derived, not yet ruled. On 2020-03-11, arena: Still legal in Brawl until the pla"
     },
     {
       "name": "winota-brawl-may19-de",
       "ok": true,
-      "ms": 1499,
+      "ms": 1586,
       "note": "Abgeleitet, noch nicht gebunden. Am 2020-05-19, arena: In Brawl noch legal bis z"
     },
     {
       "name": "lurrus-legacy-may18",
       "ok": true,
-      "ms": 1454,
+      "ms": 1580,
       "note": "Derived, not yet ruled. On 2020-05-18, tabletop: Banned in Legacy."
     },
     {
       "name": "zirda-legacy-may18",
       "ok": true,
-      "ms": 1544,
+      "ms": 1632,
       "note": "Derived, not yet ruled. On 2020-05-18, tabletop: Banned in Legacy."
     },
     {
       "name": "drannith-brawl-may20",
       "ok": true,
-      "ms": 1415,
+      "ms": 1610,
       "note": "Derived, not yet ruled. On 2020-05-20, arena: Still legal in Brawl until the pla"
     },
     {
       "name": "nexus-july15",
       "ok": true,
-      "ms": 1709,
+      "ms": 1642,
       "note": "Derived, not yet ruled. On 2020-07-15, arena: Still legal in Historic until the "
     },
     {
       "name": "agent-historic-july15",
       "ok": true,
-      "ms": 1412,
+      "ms": 1618,
       "note": "Derived, not yet ruled. On 2020-07-15, arena: Suspended in Historic."
     },
     {
       "name": "agent-historic-july16",
       "ok": true,
-      "ms": 1727,
+      "ms": 1695,
       "note": "Derived, not yet ruled. On 2020-07-16, arena: Banned in Historic."
     },
     {
       "name": "burning-tree-july16",
       "ok": true,
-      "ms": 1503,
+      "ms": 1727,
       "note": "Derived, not yet ruled. On 2020-07-16, arena: Suspended in Historic."
     },
     {
       "name": "arcum-modern-july13",
       "ok": true,
-      "ms": 1393,
+      "ms": 1749,
       "note": "Derived, not yet ruled. On 2020-07-13, tabletop: Banned in Modern."
     },
     {
       "name": "expedition-pauper-july13",
       "ok": true,
-      "ms": 1527,
+      "ms": 1558,
       "note": "Derived, not yet ruled. On 2020-07-13, tabletop: Banned in Pauper."
     },
     {
       "name": "oath-pioneer-july13",
       "ok": true,
-      "ms": 1568,
+      "ms": 1442,
       "note": "Derived, not yet ruled. On 2020-07-13, tabletop: Unbanned in Pioneer. Legal agai"
     },
     {
       "name": "growth-spiral-aug2-es",
       "ok": true,
-      "ms": 1393,
+      "ms": 1474,
       "note": "Derivado, aún sin fijar. El 2020-08-02, tabletop: Aún legal en Standard hasta el"
     },
     {
       "name": "cauldron-aug3",
       "ok": true,
-      "ms": 1413,
+      "ms": 1547,
       "note": "Derived, not yet ruled. On 2020-08-03, arena: Banned in Standard."
     },
     {
       "name": "kethis-aug2",
       "ok": true,
-      "ms": 1491,
+      "ms": 1573,
       "note": "Derived, not yet ruled. On 2020-08-02, tabletop: Still legal in Pioneer until th"
     },
     {
       "name": "inverter-aug3",
       "ok": true,
-      "ms": 1429,
+      "ms": 1718,
       "note": "Derived, not yet ruled. On 2020-08-03, tabletop: Banned in Pioneer."
     },
     {
       "name": "breach-legacy-march10",
       "ok": true,
-      "ms": 1389,
+      "ms": 1577,
       "note": "Derived, not yet ruled. On 2020-03-10, tabletop: Banned in Legacy."
     },
     {
       "name": "breach-pioneer-aug3",
       "ok": true,
-      "ms": 1677,
+      "ms": 1462,
       "note": "Derived, not yet ruled. On 2020-08-03, tabletop: Banned in Pioneer."
     },
     {
       "name": "once-modern-march10",
       "ok": true,
-      "ms": 1512,
+      "ms": 1659,
       "note": "Derived, not yet ruled. On 2020-03-10, tabletop: Banned in Modern."
     },
     {
       "name": "teferi-standard-aug3-fr",
       "ok": true,
-      "ms": 1497,
+      "ms": 52500,
       "note": "Dérivé, pas encore verrouillé. Le 2020-08-03, tabletop: Banni en Standard."
     },
     {
       "name": "wilderness-historic-aug3-de",
       "ok": true,
-      "ms": 1446,
+      "ms": 55740,
       "note": "Abgeleitet, noch nicht gebunden. Am 2020-08-03, arena: In Historic suspendiert."
     },
     {
       "name": "uro-sep28",
       "ok": true,
-      "ms": 1393,
+      "ms": 1732,
       "note": "Derived, not yet ruled. On 2020-09-28, arena: Banned in Standard."
     },
     {
       "name": "omnath-historic-oct12",
       "ok": true,
-      "ms": 1463,
+      "ms": 1647,
       "note": "Derived, not yet ruled. On 2020-10-12, arena: Suspended in Historic."
     },
     {
       "name": "omnath-brawl-oct12",
       "ok": true,
-      "ms": 1398,
+      "ms": 1501,
       "note": "Derived, not yet ruled. On 2020-10-12, arena: Banned in Brawl."
     },
     {
       "name": "field-unban-march12",
       "ok": true,
-      "ms": 1802,
+      "ms": 1556,
       "note": "Derived, not yet ruled. On 2020-03-12, arena: Unbanned in Historic. Legal again."
     },
     {
       "name": "oko-march11-fr",
       "ok": true,
-      "ms": 1414,
+      "ms": 1584,
       "note": "Dérivé, pas encore verrouillé. Le 2020-03-11, arena: Suspendu en Historique."
     },
     {
       "name": "sources-mcp",
       "ok": true,
-      "ms": 1692,
+      "ms": 1691,
       "note": "Standing ruling in the lake, not a fresh guess. On 2020-06-02, arena: Cast the c"
     },
     {
       "name": "public-calls",
       "ok": true,
-      "ms": 55
+      "ms": 127
+    },
+    {
+      "name": "field-arena-oct23",
+      "ok": true,
+      "ms": 1673,
+      "note": "Derived, not yet ruled. On 2019-10-23, arena: Still legal in Standard until the "
+    },
+    {
+      "name": "field-arena-oct24",
+      "ok": true,
+      "ms": 1820,
+      "note": "Derived, not yet ruled. On 2019-10-24, arena: Banned in Standard."
+    },
+    {
+      "name": "oko-paper-nov20",
+      "ok": true,
+      "ms": 1478,
+      "note": "Derived, not yet ruled. On 2019-11-20, tabletop: Still legal in Standard until t"
+    },
+    {
+      "name": "oko-arena-nov18",
+      "ok": true,
+      "ms": 1611,
+      "note": "Derived, not yet ruled. On 2019-11-18, arena: Banned in Standard."
+    },
+    {
+      "name": "ironworks-mtgo-jan21",
+      "ok": true,
+      "ms": 1665,
+      "note": "Derived, not yet ruled. On 2019-01-21, mtgo: Banned in Modern."
+    },
+    {
+      "name": "ironworks-paper-jan21",
+      "ok": true,
+      "ms": 1568,
+      "note": "Derived, not yet ruled. On 2019-01-21, tabletop: Still legal in Modern until the"
+    },
+    {
+      "name": "lutri-arena-apr16",
+      "ok": true,
+      "ms": 1912,
+      "note": "Derived, not yet ruled. On 2020-04-16, arena: Banned in Brawl."
+    },
+    {
+      "name": "time-warp-june9",
+      "ok": true,
+      "ms": 2007,
+      "note": "Derived, not yet ruled. On 2021-06-09, arena: Still legal in Historic until the "
+    },
+    {
+      "name": "time-warp-june10",
+      "ok": true,
+      "ms": 1632,
+      "note": "Derived, not yet ruled. On 2021-06-10, arena: Banned in Historic."
+    },
+    {
+      "name": "lucky-clover-oct12",
+      "ok": true,
+      "ms": 1658,
+      "note": "Derived, not yet ruled. On 2020-10-12, arena: Banned in Standard."
+    },
+    {
+      "name": "uro-modern-feb15",
+      "ok": true,
+      "ms": 1774,
+      "note": "Derived, not yet ruled. On 2021-02-15, tabletop: Banned in Modern."
     },
     {
       "name": "lake-claims",
       "ok": true,
-      "ms": 59,
-      "note": "138"
+      "ms": 61,
+      "note": "272"
     },
     {
       "name": "lake-sources",
       "ok": true,
-      "ms": 32,
-      "note": "9"
+      "ms": 29,
+      "note": "17"
     }
   ]
 }

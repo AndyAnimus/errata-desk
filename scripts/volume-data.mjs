@@ -4,7 +4,9 @@
  * Historic/Brawl are Arena-only. Pioneer/Modern/Legacy/Vintage/Pauper are tabletop + Magic Online.
  */
 
-export const ANNOUNCEMENTS = [
+import {WAVE2_ANNOUNCEMENTS, WAVE2_ROWS, WAVE2_WORKED} from './volume-wave2.mjs'
+
+const ANNOUNCEMENTS_CORE = [
   {
     id: '2020-03-09',
     title: 'March 9, 2020, Banned and Restricted Announcement',
@@ -80,6 +82,8 @@ Effective Date: October 12, 2020.`,
   },
 ]
 
+export const ANNOUNCEMENTS = [...ANNOUNCEMENTS_CORE, ...WAVE2_ANNOUNCEMENTS]
+
 const FORMAT_PLATFORMS = {
   legalInStandard: ['tabletop', 'mtgo', 'arena'],
   legalInHistoric: ['arena'],
@@ -96,7 +100,7 @@ function row(partial) {
   return partial
 }
 
-export const ROWS = [
+export const ROWS_CORE = [
   row({
     subject: 'golos-tireless-pilgrim',
     name: 'Golos, Tireless Pilgrim',
@@ -426,6 +430,8 @@ export const ROWS = [
   }),
 ]
 
+export const ROWS = [...ROWS_CORE, ...WAVE2_ROWS]
+
 const FORMAT_NAME = {
   legalInStandard: {en: 'Standard', fr: 'Standard', de: 'Standard', es: 'Standard'},
   legalInHistoric: {en: 'Historic', fr: 'Historique', de: 'Historic', es: 'Histórico'},
@@ -482,6 +488,7 @@ export function expandClaims() {
     const platforms = FORMAT_PLATFORMS[row.predicate]
     for (const platform of platforms) {
       const switchOn = ann.clocks[platform]
+      if (!switchOn) continue
       const spans = []
       if (row.legalUntil?.[platform]) {
         spans.push({kind: 'legal', until: row.legalUntil[platform], from: null})
@@ -519,7 +526,10 @@ export function expandClaims() {
       })
     }
   }
-  return claims
+  // Later rows may close an earlier open span (same id, new effectiveUntil). Keep the last write.
+  const byId = new Map()
+  for (const claim of claims) byId.set(claim._id, claim)
+  return [...byId.values()]
 }
 
 export function cardAliases() {
@@ -537,7 +547,7 @@ export function cardAliases() {
   })
 }
 
-export const WORKED = [
+export const WORKED_CORE = [
   {
     _id: 'call-oko-arena-march11',
     _type: 'workedCall',
@@ -595,3 +605,5 @@ export const WORKED = [
     finding: 'Suspended in Historic. Banned in Standard and Brawl the same day. Three answers, one card.',
   },
 ]
+
+export const WORKED = [...WORKED_CORE, ...WAVE2_WORKED]

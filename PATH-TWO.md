@@ -32,7 +32,7 @@ No-token check: https://luiscore.com/errata-desk/check
 
 The live workflow instance, no login: https://luiscore.com/errata-desk/workflow
 
-QA battery against the live desk: `43/43`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`. The public lake holds 138 `rulesClaim` rows and 9 primary-source excerpts.
+QA battery against the live desk: `54/54`. Workflow timed run: `8/8` (`timed-run-latest`). Logs in `demo/qa-battery.json`. The public lake holds 272 `rulesClaim` rows and 17 primary-source excerpts from printed Wizards announcements (2019–2021), each claim carrying FR/DE/ES.
 
 The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
 
