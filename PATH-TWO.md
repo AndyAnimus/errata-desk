@@ -6,45 +6,48 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 *This is a submission for the [Sanity Challenge, Path Two: Vibe-Code Something Strange](https://dev.to/challenges/sanity-2026-09-16)*
 
-No login on the dial, the board, the scorecard, or the workflow page. The Studio Workflows tab needs a project seat. Start here:
+The dial is https://luiscore.com/errata-desk/needle. It opens on June 3. No account.
 
-1. https://luiscore.com/errata-desk/needle — opens on June 3. Tabletop and Magic Online have switched. Arena has not.
-2. Turn to June 2. Sign with a name, or click **Try as agent**. The agent is refused. `decidedBy` stays empty.
-3. https://luiscore.com/errata-desk/workflow — the official Workflows instance. The editor token is refused on sign. Stage stays `awaitingSignature`.
-4. https://luiscore.com/errata-desk/app/ — App SDK board. Unsigned fields render as a dash.
-5. https://luiscore.com/errata-desk/score — the same probes, one click.
+The Studio Workflows tab wants a project login. Everything else below does not.
+
+1. Turn the dial to June 2. Sign with a name, or click **Try as agent**. The agent is refused and `decidedBy` stays empty.
+2. https://luiscore.com/errata-desk/workflow — workflow instance `production.wf-instance.6be7291055cc`. Sign as the editor is refused. Stage stays `awaitingSignature`.
+3. https://luiscore.com/errata-desk/app/ — same case. Unsigned fields are a dash.
+4. https://luiscore.com/errata-desk/score — reruns the cases.
 
 Project `gsu7qzk9`, dataset `production` (public).
 
 ## What I Built
 
-The Needle is not a chat. It is a dial.
+The Path One page already had three bars for one week. A text box didn't show the thing I kept tripping on: June 3 is three different answers. So the bars became a dial.
 
-You turn June 1, June 2, June 3, or June 4. Three rings on one face. Brown is the old companion reminder. Green is pay 3. The hand lands on the day, and the lake paints what each table is actually doing.
+You turn June 1, 2, 3, or 4. Brown is the old companion reminder. Green is pay 3. On June 3, paper has already switched, Magic Online switches that morning, and Arena has not.
 
-June 3 is the strange day. Tabletop has already switched. Magic Online switches that morning. Arena has not. Same sentence, three answers, one instrument.
+There is no schema for the dial. `needle.html` posts "On Jun N 2020, what does each table do?" and paints the lanes from the `compare` array.
 
-The dial is one surface. The other is an App SDK board on the same lake: https://luiscore.com/errata-desk/app/
+The other page on the same lake is the sign board: https://luiscore.com/errata-desk/app/
 
-That board reads `deskCase` documents live. `decidedBy` and `decidedAt` render as a dash until someone signs. The workflow that gets a case there is stored as data (`workflow-sign-call`): the agent may derive, and only a person may sign. A timed edit run of that workflow finished 8/8. The run is the document `timed-run-latest`. One of the eight steps is the agent being refused when it tries to sign.
+It reads `deskCase`. `decidedBy` and `decidedAt` are a dash until someone signs. The transitions live in `workflow-sign-call`: the agent can derive, and only a person can sign. `timed-run-latest` is 8/8. One of those steps is the agent being refused.
 
 ## Demo
 
-Judge scorecard: https://luiscore.com/errata-desk/score
+Dial: https://luiscore.com/errata-desk/needle
 
-Turn it: https://luiscore.com/errata-desk/needle
+On June 2 the Arena case is unsigned. Type a name, or click Try as agent.
 
-On June 2, Arena stays unsigned on the dial. Type a name and Sign, or click Try as agent. The agent is refused. The same case shows on the App SDK board: https://luiscore.com/errata-desk/app/
+Sign board: https://luiscore.com/errata-desk/app/
 
-Live Workflows instance: https://luiscore.com/errata-desk/workflow
+Workflow: https://luiscore.com/errata-desk/workflow
 
-No-token check: https://luiscore.com/errata-desk/check
+Checks: https://luiscore.com/errata-desk/score
 
-QA battery against the live desk: `54/54`. Workflow timed run: `8/8` (`timed-run-latest`). The public lake holds 272 `rulesClaim` rows and 17 primary-source excerpts from printed Wizards announcements (2019–2021), each claim carrying FR/DE/ES.
+No-token JSON: https://luiscore.com/errata-desk/check
 
-The ask desk, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
+Battery against the live desk: `54/54`. Workflow run: `8/8` (`timed-run-latest`). 272 `rulesClaim` rows, 17 source excerpts from the printed announcements (2019–2021), with FR/DE/ES on the claims.
 
-Studio, Clock board first: https://luis-errata-desk.sanity.studio/
+The ask page, if you want the sentence instead of the dial: https://luiscore.com/errata-desk/
+
+Studio: https://luis-errata-desk.sanity.studio/
 
 {% agent_session errata-desk-june-3-across-three-clocks-3xcvye %}
 
@@ -52,39 +55,37 @@ Studio, Clock board first: https://luis-errata-desk.sanity.studio/
 
 https://github.com/AndyAnimus/errata-desk
 
-The dial is `needle.html`. It posts "On Jun N 2020, what does each table do?" to the desk, which calls `initial_context`, `array_field_reader` on the clocks, `errata-sources`, and `groq_query`. The green arc is painted from those dates, not from a picture of a card.
+`needle.html` posts to the desk. The desk calls `initial_context`, `array_field_reader` on the clocks, `errata-sources`, and `groq_query`. The green arc is those dates.
 
 ## My Build Process
 
-Path Two is scored on the build as much as the result, so this is the actual sequence.
+I started from the three bars on the Path One page. The week is the whole product, and June 3 is the day the three rings don't match, so I wanted to turn the day instead of typing it. If the lake is wrong, the dial is wrong. I didn't add a document type for the picture.
 
-The Path One page already drew three bars for one week. A chat box was the wrong object. The strange part is that June 3 is three legal states at once, so the bars became a dial you turn. I did not add a schema for the dial. `needle.html` posts “On Jun N 2020, what does each table do?” and paints the lanes from the `compare` array. If the lake is wrong, the dial is wrong. That was the point.
+The brief also asks for an approval step. That was already the desk's problem, so I stored it as `workflow-sign-call` instead of a branch in the server. States are asked → derived → awaitingSignature → signed. `scripts/timed-run.mjs` walks it and writes `timed-run-latest`. Two of the eight steps fail on purpose: the agent cannot sign, and a blank name cannot sign. Both refusals are in the log.
 
-The bonus the brief asked for was already the desk’s problem: an agent may move a case forward, and a person approves through the same transitions. That process is the document `workflow-sign-call`, not a comment in the server. States are asked → derived → awaitingSignature → signed. `scripts/timed-run.mjs` walks it and writes `timed-run-latest`. The run is 8/8. Two of the eight steps are refusals: the agent cannot sign, and a blank name cannot sign. I left those failures in the log.
+The sign board is a second view of `deskCase`, not a second copy of the cases. Unsigned fields render as a dash.
 
-The App SDK board is the other surface past the Studio. It reads `deskCase` live. `decidedBy` and `decidedAt` render as a dash until the sign call. I did not build a second copy of the cases for the board.
+I didn't add a document type just to have one, and I didn't put dates in the lake that aren't on the Wizards page. The 2019–2021 announcements are there because each page prints a different paper, Magic Online, or Arena date.
 
-What I did not do: a second document type to look busy, a fake hotel catalog, or ban dates that are not printed on the Wizards page. The 2020 announcements in the lake are there because each one prints a different tabletop, Magic Online, or Arena clock. Volume that fails that test would have been padding.
+Embeddings are on. A query for "three tables disagree on one day" returns the call "Same words, June 2" with a `_score`, through `text::semanticSimilarity`. Turning embeddings on needs `sanity.project.datasets/update`. The robot tokens don't have that. I did it from the signed-in project.
 
-Embeddings are on. A meaning query for “three tables disagree on one day” returns the desk call “Same words, June 2” with a real `_score`, via `text::semanticSimilarity`. Turning that flag on needs `sanity.project.datasets/update`, which the robot tokens do not have. It was enabled from the signed-in project.
-
-The session embed is a Codex run that curled the public calls list and named the June 3 call. It is that transcript, not a summary of it.
+The session embed is a Codex run that curled the public calls list and named the June 3 call. It's the transcript.
 
 ## Sanity Workflows
 
-The homemade gate was not the product Brawndo shipped. I installed `@sanity/workflow-engine`, `@sanity/workflow-cli`, and `@sanity/workflow-studio-plugin` at 0.33.0 and deployed a definition named `sign-call` v1 onto `gsu7qzk9.production`.
+I installed `@sanity/workflow-engine`, `@sanity/workflow-cli`, and `@sanity/workflow-studio-plugin` at 0.33.0 and deployed `sign-call` v1 onto `gsu7qzk9.production`.
 
-The definition has four stages: asked, derived, awaitingSignature, signed. Derive and hold are `editor` actions. Sign is `administrator` only. The robot token on this project is an editor. It started instance `production.wf-instance.6be7291055cc`, fired derive, fired hold, and was refused on sign.
+Four stages: asked, derived, awaitingSignature, signed. Derive and hold are `editor`. Sign is `administrator`. The token on this project is an editor. It started `production.wf-instance.6be7291055cc`, fired derive, fired hold, and was refused on sign.
 
-That instance is not on the public API. The page a judge can open with no login reads it through the desk and will try the sign action again:
+That instance is not on the public API. This page reads it through the desk and tries sign again:
 
 https://luiscore.com/errata-desk/workflow
 
-The last click returned `Action "sign:sign" is not allowed: action filter returned false`, and the stage stayed `awaitingSignature`.
+The last click returned `Action "sign:sign" is not allowed: action filter returned false`. The stage stayed `awaitingSignature`.
 
-The Studio tab is mounted: https://luis-errata-desk.sanity.studio/workflows
+Studio tab: https://luis-errata-desk.sanity.studio/workflows
 
-Plugin 0.33.0 imports `Popover`, `Tooltip`, `Menu`, and `useToast` from the `@sanity/ui` barrel. Studio 6 is on UI v4, which moved those to subpaths and dropped them from the barrel. `studio/ui-compat.ts` re-exports the subpaths, and the Vite alias applies only to the exact specifier `@sanity/ui`. The tab needs a project login. The public page does not.
+Plugin 0.33.0 imports `Popover`, `Tooltip`, `Menu`, and `useToast` from the `@sanity/ui` barrel. Studio 6 is on UI v4, which moved those off the barrel. `studio/ui-compat.ts` re-exports the subpaths. The Vite alias is only the exact specifier `@sanity/ui`. The Studio tab needs a project login. The page above does not.
 
 ## Sanity Project Details
 
@@ -95,9 +96,9 @@ Plugin 0.33.0 imports `Popover`, `Tooltip`, `Menu`, and `useToast` from the `@sa
 - Studio: https://luis-errata-desk.sanity.studio/
 - Studio Workflows tab (project login): https://luis-errata-desk.sanity.studio/workflows
 - Needle: https://luiscore.com/errata-desk/needle
-- Scorecard: https://luiscore.com/errata-desk/score
-- Workflow instance: https://luiscore.com/errata-desk/workflow
-- App SDK board: https://luiscore.com/errata-desk/app/
+- Checks: https://luiscore.com/errata-desk/score
+- Workflow: https://luiscore.com/errata-desk/workflow
+- Sign board: https://luiscore.com/errata-desk/app/
 - Repo: https://github.com/AndyAnimus/errata-desk
 - Context MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-desk?embeddings=true
 - Sources MCP: https://api.sanity.io/v2026-03-03/context/mcp/gsu7qzk9/production/errata-sources

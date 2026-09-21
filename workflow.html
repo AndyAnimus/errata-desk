@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sign-call — the live instance</title>
+<title>Sign-call</title>
 <style>
   :root { --ink:#e8e2d4; --mute:#9a917e; --paper:#14110e; --rail:#1f1a14; --line:#3a3226; --force:#c8f07a; --stale:#ff8f6b; --accent:#f0c75e; }
   * { box-sizing: border-box; }
@@ -24,8 +24,8 @@
 <body>
   <main class="wrap">
     <p class="kicker">Sanity Workflows · sign-call v1</p>
-    <h1>The editor is still waiting</h1>
-    <p>This page reads the workflow instance with the desk’s editor token. A public query of the same id returns nothing, because <code>sanity.workflow.instance</code> is not on the public API. The stage below is the document, not a log we typed.</p>
+    <h1>Sign-call</h1>
+    <p>This page reads instance <code>production.wf-instance.6be7291055cc</code> with the desk’s editor token. A public query of that id returns nothing. <code>sanity.workflow.instance</code> is not on the public API. The stage below is the document.</p>
     <div class="panel" id="live">Loading the instance…</div>
     <button id="sign" type="button">Try to sign as the editor</button>
     <div class="panel" id="try" hidden></div>

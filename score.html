@@ -2,7 +2,7 @@
 <html lang="en">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Errata Desk — judge scorecard</title>
+<title>Errata Desk — checks</title>
 <style>
   :root { --ink:#e8e2d4; --mute:#9a917e; --paper:#14110e; --rail:#1f1a14; --line:#3a3226; --ok:#c8f07a; --bad:#ff8f6b; --accent:#f0c75e; }
   * { box-sizing: border-box; }
@@ -27,16 +27,16 @@
 </style>
 <body>
 <main class="wrap">
-  <p class="kicker">Path One · Path Two · no login</p>
-  <h1>Judge scorecard</h1>
-  <p>This page runs the live probes a judge can click without a token. It is the product, not a screenshot of a green CI job.</p>
+  <p class="kicker">no login</p>
+  <h1>Checks</h1>
+  <p>Reruns the cases against the live desk and prints what came back.</p>
   <div class="grid" id="stats">Loading…</div>
   <p><button type="button" id="rerun">Re-run probes</button>
     <a href="./">desk</a> · <a href="needle">needle</a> · <a href="workflow">workflow</a> · <a href="check">check JSON</a> ·
     <a href="https://luis-errata-desk.sanity.studio/workflows">Studio Workflows</a></p>
-  <h2>Probes</h2>
+  <h2>Results</h2>
   <div id="probes"></div>
-  <h2>Why this is 100 on our sheet</h2>
+  <h2>Notes</h2>
   <p id="why">…</p>
 </main>
 <script>

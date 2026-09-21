@@ -826,7 +826,7 @@ const page = `<!doctype html>
   <main class="wrap">
     <p class="kicker">Sanity Context · Path One</p>
     <h1>Errata Desk</h1>
-    <p class="lede">One sentence. Three clocks. Companion procedure and the June 2020 Standard bans share the same announcement — and not the same effective day. Ask in English, French, German, or Spanish. Start at the <a href="score" style="color:var(--accent)">judge scorecard</a> if you want every probe in one click.</p>
+    <p class="lede">Companion procedure changed in June 2020. Paper, Magic Online, and Arena did not switch on the same day. You can ask in English, French, German, or Spanish. <a href="score" style="color:var(--accent)">Checks</a> reruns the cases.</p>
 
     <svg class="board" id="board" viewBox="0 0 720 210" role="img" aria-label="Three clocks, one week">
       <text x="90" y="22" class="tick">Jun 1</text>
@@ -868,7 +868,7 @@ const page = `<!doctype html>
     <footer>
       Studio <a href="https://luis-errata-desk.sanity.studio/" target="_blank" rel="noreferrer">luis-errata-desk.sanity.studio</a>
       · <a href="https://luis-errata-desk.sanity.studio/workflows" target="_blank" rel="noreferrer">Workflows</a>
-      · <a href="score">judge scorecard</a>
+      · <a href="score">checks</a>
       · <a href="workflow">live instance</a>
       · Context <code>errata-desk</code>, <code>errata-sign</code>, <code>errata-sources</code>
       · <a href="check">public check</a> · EN/FR/DE/ES
@@ -1193,8 +1193,8 @@ async function buildScorecard() {
     workflow: {id: wf?._id || null, stage: wf?.currentStage || null},
     why:
       failed === 0
-        ? 'Every live probe passed: Context trio URLs, printed-clock lake, June 2 split, unsigned person gate, Needle three answers, FR body, Field multi-clock, homemade refusals, and Sanity Workflows editor refuse. That is a full sweep of both path rubrics on this sheet.'
-        : `${failed} probe(s) failed. Fix those before calling this a 100.`,
+        ? 'All 13 checks passed: lake counts, June 2 split, unsigned case, Needle on June 3, a French ask, Field of the Dead, the agent refuse, a blank signature, and the workflow editor refuse.'
+        : `${failed} check(s) failed.`,
   }
 }
 

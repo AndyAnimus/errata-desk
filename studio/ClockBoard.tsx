@@ -95,7 +95,6 @@ export function ClockBoard() {
 
         <Text size={1} muted>
           Amber is the old reminder. Green is pay 3. The switch is not the same day on each row.
-          The calls under this board were written for the desk. They are not a card-image catalog.
         </Text>
       </Stack>
     </Box>
