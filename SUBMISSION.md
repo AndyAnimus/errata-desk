@@ -6,6 +6,15 @@ tags: devchallenge, sanitychallenge, sanity, ai
 
 *This is a submission for the [Sanity Challenge, Path One: Ship an Agent That Queries Real Content](https://dev.to/challenges/sanity-2026-09-16)*
 
+Open these, in order. No login.
+
+1. https://luiscore.com/errata-desk/ — the page asks itself. Arena on June 2 is still “cast from outside the game.” The pay-3 claim is on screen, labeled not in force.
+2. https://luiscore.com/errata-desk/needle — turn to June 3. Tabletop and Magic Online have switched. Arena has not.
+3. https://luiscore.com/errata-desk/check — same split, no token.
+4. Try to sign with a blank name, or as the agent. Both are refused. `decidedBy` stays empty.
+
+Project `gsu7qzk9`, dataset `production` (public).
+
 ## What I Built
 
 Errata Desk answers a rules question keyword search gets wrong.

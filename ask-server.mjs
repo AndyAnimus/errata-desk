@@ -1029,6 +1029,7 @@ document.getElementById('sampleBan').onclick = () => {
   document.getElementById('q').value = 'On Arena, June 2 2020, is Fires of Invention banned in Standard?'
   ask()
 }
+ask()
 
 fetch('calls')
   .then(r => r.json())
