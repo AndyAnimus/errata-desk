@@ -1087,6 +1087,20 @@ async function publicCount(type) {
   return Number(data.result) || 0
 }
 
+async function restoreUnsignedArenaCase() {
+  // Public visitors can sign the live June 2 case. Checks put it back so the
+  // person-only gate stays visible for the next open.
+  await mutate([
+    {
+      patch: {
+        id: 'case-arena-2020-06-02',
+        set: {state: 'awaitingSignature', actor: null},
+        unset: ['decidedBy', 'decidedAt'],
+      },
+    },
+  ])
+}
+
 async function buildScorecard() {
   const probes = []
   const push = (name, ok, detail) => probes.push({name, ok: Boolean(ok), detail: String(detail || '')})
@@ -1094,6 +1108,8 @@ async function buildScorecard() {
   const [claims, sources] = await Promise.all([publicCount('rulesClaim'), publicCount('sourceDoc')])
   push('lake-claims', claims >= 240, `${claims} rulesClaim rows (public GROQ)`)
   push('lake-sources', sources >= 14, `${sources} sourceDoc excerpts (public GROQ)`)
+
+  await restoreUnsignedArenaCase()
 
   const companionQ = `*[_id in ["claim-arena-old","claim-arena-current"]]{_id,value,effectiveFrom,effectiveUntil}`
   const caseQ = `*[_id=="case-arena-2020-06-02"][0]{state,decidedBy,decidedAt}`
@@ -1183,6 +1199,8 @@ async function buildScorecard() {
   const failed = probes.filter((p) => !p.ok).length
   const pathOne = failed === 0 ? 100 : Math.max(0, 100 - failed * 4)
   const pathTwo = failed === 0 ? 100 : Math.max(0, 100 - failed * 4)
+
+  await restoreUnsignedArenaCase()
 
   return {
     at: new Date().toISOString(),
