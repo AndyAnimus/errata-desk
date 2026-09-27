@@ -254,6 +254,56 @@ function split(rows, date) {
   return {inForce, notInForce: rows.filter((c) => !inForce.includes(c))}
 }
 
+function squash(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim()
+}
+
+function windowsOverlap(a, b) {
+  const a0 = a.effectiveFrom || '0000-01-01'
+  const a1 = a.effectiveUntil || '9999-12-31'
+  const b0 = b.effectiveFrom || '0000-01-01'
+  const b1 = b.effectiveUntil || '9999-12-31'
+  return a0 < b1 && b0 < a1
+}
+
+async function markQuotes(claims) {
+  const urls = [...new Set(claims.map((c) => c.sourceUrl).filter(Boolean))]
+  if (!urls.length) return claims
+  let docs = []
+  try {
+    const raw = await mcp('groq_query', {
+      query: `*[_type=="sourceDoc" && sourceUrl in [${urls.map((u) => JSON.stringify(u)).join(',')}]]{sourceUrl, excerpt, body}`,
+    }, MCP_SOURCES)
+    const rows = unpack(raw)
+    docs = Array.isArray(rows) ? rows : []
+  } catch {
+    return claims
+  }
+  const byUrl = new Map()
+  for (const d of docs) {
+    byUrl.set(d.sourceUrl, (byUrl.get(d.sourceUrl) || '') + '\n' + (d.excerpt || d.body || ''))
+  }
+  return claims.map((c) => {
+    if (!c.quote || !c.sourceUrl || !byUrl.get(c.sourceUrl)) return c
+    return {...c, quoteOk: squash(byUrl.get(c.sourceUrl)).includes(squash(c.quote))}
+  })
+}
+
+async function caseIsSigned(platform, date) {
+  try {
+    const raw = await mcp(
+      'groq_query',
+      {query: `*[_id=="case-${platform}-${date}"][0]{state,decidedBy,decidedAt}`},
+      MCP_SIGN,
+    )
+    const row = unpack(raw)
+    const doc = Array.isArray(row) ? row[0] : row
+    return Boolean(doc && doc.state === 'signed' && doc.decidedBy && doc.decidedAt)
+  } catch {
+    return false
+  }
+}
+
 async function saveRuling({platform, date, claimId, reading}) {
   const claims = await mcp('groq_query', {
     query: `*[_type=="rulesClaim" && _id=="${claimId}"][0]{_id,value,sourceUrl}`,
@@ -347,10 +397,31 @@ async function signCase({id, name}) {
   return {id, state: 'signed', decidedBy: who, decidedAt: now}
 }
 
+async function noteAgentRefuse(row) {
+  const now = new Date().toISOString()
+  const transitions = [
+    ...(row.transitions || []),
+    {_key: 'refuse-' + Date.now(), at: now, from: row.state, to: row.state, actor: 'agent', note: 'refused'},
+  ]
+  await mutate([
+    {
+      patch: {
+        id: row._id,
+        set: {agentAttemptCount: (row.agentAttemptCount || 0) + 1, transitions},
+      },
+    },
+  ])
+}
+
 async function advanceCase({id, to, actor}) {
   const row = await loadCase(id)
   if (!row) throw new Error('no case')
-  assertTransition(row.state, to, actor)
+  try {
+    assertTransition(row.state, to, actor)
+  } catch (e) {
+    if (actor === 'agent' && to === 'signed') await noteAgentRefuse(row)
+    throw e
+  }
   if (to === 'signed') throw new Error('decidedBy stays empty until a person signs')
   const now = new Date().toISOString()
   const transitions = [
@@ -371,7 +442,7 @@ async function attachDecision(result) {
       : []
   const decisions = []
   for (const t of targets) {
-    const q = `*[_type=="deskCase" && platform=="${t.platform}" && date=="${t.date}"][0]{_id,state,decidedBy,decidedAt,value}`
+    const q = `*[_type=="deskCase" && platform=="${t.platform}" && date=="${t.date}"][0]{_id,state,decidedBy,decidedAt,value,agentAttemptCount,transitions}`
     try {
       const raw = await mcp('groq_query', {query: q}, MCP_SIGN)
       const row = unpack(raw)
@@ -383,6 +454,8 @@ async function attachDecision(result) {
         state: doc?.state || null,
         decidedBy: doc?.decidedBy || null,
         decidedAt: doc?.decidedAt || null,
+        agentAttemptCount: doc?.agentAttemptCount || 0,
+        transitions: doc?.transitions || [],
         signed: Boolean(doc?.decidedBy && doc?.decidedAt),
       })
     } catch (e) {
@@ -529,7 +602,7 @@ async function answer(text) {
       const claimsRaw = await mcp('groq_query', {query: claimsQ})
       tools.push({name: 'groq_query', detail: claimsQ})
       const rows = unpack(claimsRaw)
-      const list = Array.isArray(rows) ? rows : []
+      const list = await markQuotes(Array.isArray(rows) ? rows : [])
       const {inForce, notInForce} = split(list, day)
       const top = inForce[0]
       const clockDoc = top?.clockDoc || list[0]?.clockDoc || 'rules-change-standard-bans'
@@ -565,11 +638,11 @@ async function answer(text) {
   if (compareDate) {
     const predicate = ban ? 'legalInStandard' : 'bringIntoGame'
     const subjectFilter = ban ? ` && subject=="${ban}"` : ''
-    const claimsQ = `*[_type=="rulesClaim" && predicate=="${predicate}"${subjectFilter}]{_id,platform,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle}`
+    const claimsQ = `*[_type=="rulesClaim" && predicate=="${predicate}"${subjectFilter}]{_id,platform,status,value,valueFr,valueDe,valueEs,quote,effectiveFrom,effectiveUntil,sourceTitle,sourceUrl}`
     const claimsRaw = await mcp('groq_query', {query: claimsQ})
     tools.push({name: 'groq_query', detail: claimsQ})
     const rows = unpack(claimsRaw)
-    const list = Array.isArray(rows) ? rows : []
+    const list = await markQuotes(Array.isArray(rows) ? rows : [])
     const lanes = ['tabletop', 'mtgo', 'arena'].map((platform) => {
       const mine = list.filter((c) => c.platform === platform)
       const {inForce} = split(mine, compareDate)
@@ -578,6 +651,7 @@ async function answer(text) {
         date: compareDate,
         value: pickValue(inForce[0], lang) || 'No claim covers this day.',
         quote: inForce[0]?.quote || '',
+        quoteOk: inForce[0]?.quoteOk,
       }
     })
     return {
@@ -649,12 +723,12 @@ async function answer(text) {
   const claimsRaw = await mcp('groq_query', {query: claimsQ})
   tools.push({name: 'groq_query', detail: claimsQ})
   const claims = unpack(claimsRaw)
-  const list = Array.isArray(claims) ? claims : []
+  const list = await markQuotes(Array.isArray(claims) ? claims : [])
   const {inForce, notInForce} = split(list, date)
   const localizedIn = inForce.map((c) => ({...c, value: pickValue(c, lang)}))
   const localizedOut = notInForce.map((c) => ({...c, value: pickValue(c, lang)}))
 
-  if (boundDoc && boundDoc.value) {
+  if (boundDoc && boundDoc.value && (await caseIsSigned(platform, date))) {
     const boundClaim =
       list.find((c) => c._id === boundDoc.claimId) || inForce[0] || null
     const boundValue = pickValue(boundClaim, lang) || boundDoc.value
@@ -680,6 +754,7 @@ async function answer(text) {
     platform,
     date,
     bound: false,
+    prepared: Boolean(boundDoc && boundDoc.value),
     answer: localizeShell(lang, 'derived', {
       platform,
       date,
@@ -900,6 +975,8 @@ function claimCard(title, items, bind, kind) {
   return '<section class="panel ' + kind + '"><p class="eyebrow">' + esc(title) + '</p>' +
     items.map(c => '<div class="claim"><p><strong>' + esc(c.value) + '</strong></p>' +
       (c.quote ? '<p class="quote">“' + esc(c.quote) + '”</p>' : '') +
+      (c.quoteOk === true ? '<p class="muted">That line is in the stored excerpt.</p>' : '') +
+      (c.quoteOk === false ? '<p class="muted">That line is not in the stored excerpt.</p>' : '') +
       '<p class="muted">' + esc(c.effectiveFrom || '?') +
       (c.effectiveUntil ? ' → ' + esc(c.effectiveUntil) : ' → open') +
       (c.sourceTitle ? ' · ' + esc(c.sourceTitle) : '') + '</p>' +
@@ -915,7 +992,12 @@ function decisionBox(list) {
       '<p class="eyebrow">errata-sign · ' + esc(d.platform || '') + '</p>' +
       '<p class="answer">' + (empty ? 'Unsigned' : 'Signed') + '</p>' +
       '<p class="muted">decidedBy: ' + esc(d.decidedBy || '—') + ' · decidedAt: ' + esc(d.decidedAt || '—') +
-      (d.state ? ' · ' + esc(d.state) : '') + '</p>' +
+      (d.state ? ' · ' + esc(d.state) : '') +
+      (d.agentAttemptCount ? ' · agent tries: ' + esc(d.agentAttemptCount) : '') + '</p>' +
+      ((d.transitions || []).slice(-4).map(t =>
+        '<p class="muted">' + esc(t.actor || '') + ' · ' + esc(t.from || '') + ' → ' + esc(t.to || '') +
+        (t.note ? ' · ' + esc(t.note) : '') + '</p>'
+      ).join('')) +
       (empty && d._id
         ? '<div class="actions"><input id="signer" placeholder="Sign as" style="background:#0e0c0a;color:inherit;border:1px solid var(--line);border-radius:999px;padding:.55rem .8rem">' +
           '<button class="bind" id="sign" data-case="' + esc(d._id) + '">Sign</button></div>'
@@ -958,7 +1040,8 @@ async function ask() {
           : '<p class="answer">' + esc(last.answer) + '</p>') +
         '<p class="muted">' + esc(last.reading || '') +
           (last.platform ? ' · ' + esc(last.platform) + ' @ ' + esc(last.date) : '') +
-          (last.bound ? ' · already bound' : '') + '</p>' +
+          (last.bound ? ' · already bound' : '') +
+          (last.prepared ? ' · written, not signed' : '') + '</p>' +
       '</section>' +
       lanes +
       claimCard('In force on this clock', last.inForce, !last.bound, 'force') +
@@ -972,7 +1055,9 @@ async function ask() {
       toolsBox(last.tools)
     status.innerHTML = last.bound
       ? '<b>bound</b> · returned stored ruling'
-      : '<b>derived</b> · bind to make it stick'
+      : last.prepared
+        ? '<b>written</b> · waiting on a person'
+        : '<b>derived</b> · bind to make it stick'
     out.querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => {
       b.disabled = true
       b.textContent = 'Binding…'
@@ -1159,6 +1244,32 @@ async function buildScorecard() {
   }
   push('agent-cannot-sign', /illegal|cannot/i.test(agentMsg), agentMsg)
 
+  const attemptQ = `*[_id=="case-arena-2020-06-02"][0]{agentAttemptCount}`
+  const attempt = await fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(attemptQ)).then((r) => r.json())
+  push(
+    'agent-attempts',
+    (attempt.result?.agentAttemptCount || 0) >= 1,
+    `agent tries ${attempt.result?.agentAttemptCount || 0}`,
+  )
+
+  const srcUrl = 'https://magic.wizards.com/en/news/announcements/june-1-2020-banned-and-restricted-announcement'
+  const excerptQ = `*[_type=="sourceDoc" && sourceUrl=="${srcUrl}"]{excerpt}`
+  const excerpts = await fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(excerptQ)).then((r) => r.json())
+  const blob = (excerpts.result || []).map((d) => d.excerpt || '').join('\n')
+  const payLine = 'you can pay 3 generic mana to put your companion from your sideboard into your hand'
+  push('quote-in-excerpt', blob.toLowerCase().includes(payLine), payLine)
+
+  const arenaQ = `*[_type=="rulesClaim" && predicate=="bringIntoGame" && platform=="arena"]{effectiveFrom, effectiveUntil}`
+  const arenaRows = await fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(arenaQ)).then((r) => r.json())
+  const spans = arenaRows.result || []
+  let overlap = false
+  for (let i = 0; i < spans.length; i++) {
+    for (let j = i + 1; j < spans.length; j++) {
+      if (windowsOverlap(spans[i], spans[j])) overlap = true
+    }
+  }
+  push('one-window', spans.length >= 2 && !overlap, `${spans.length} Arena companion spans, overlap ${overlap}`)
+
   let blankMsg = ''
   try {
     await signCase({id: 'case-arena-2020-06-02', name: ''})
@@ -1211,7 +1322,7 @@ async function buildScorecard() {
     workflow: {id: wf?._id || null, stage: wf?.currentStage || null},
     why:
       failed === 0
-        ? 'All 13 checks passed: lake counts, June 2 split, unsigned case, Needle on June 3, a French ask, Field of the Dead, the agent refuse, a blank signature, and the workflow editor refuse.'
+        ? 'All checks passed: lake counts, June 2 split, unsigned case, agent tries recorded, the pay-3 line in the excerpt, one Arena window, Needle on June 3, a French ask, Field of the Dead, the agent refuse, a blank signature, and the workflow editor refuse.'
         : `${failed} check(s) failed.`,
   }
 }

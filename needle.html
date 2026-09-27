@@ -70,7 +70,7 @@ async function turn(day) {
     if (arena.signed) {
       sign.innerHTML = '<b>Signed</b><p class="meta">decidedBy: '+esc(arena.decidedBy)+' · decidedAt: '+esc(arena.decidedAt)+'</p>'
     } else {
-      sign.innerHTML = '<b>Arena case unsigned</b><p class="meta">decidedBy and decidedAt stay empty until a person signs. The agent cannot fill them.</p>' +
+      sign.innerHTML = '<b>Arena case unsigned</b><p class="meta">decidedBy and decidedAt stay empty until a person signs. Agent tries so far: ' + esc(arena.agentAttemptCount || 0) + '.</p>' +
         '<input id="signer" placeholder="Sign as"><button id="doSign" type="button">Sign</button> ' +
         '<button id="agentTry" type="button">Try as agent</button><p class="meta" id="agentOut"></p>'
       document.getElementById('doSign').onclick = async () => {
