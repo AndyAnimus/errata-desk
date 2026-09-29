@@ -1,5 +1,7 @@
 import {createServer} from 'node:http'
+import {execSync} from 'node:child_process'
 import {readFileSync} from 'node:fs'
+import {fileURLToPath} from 'node:url'
 import {assertTransition} from './workflow.mjs'
 import {cardAliases} from './scripts/volume-data.mjs'
 
@@ -19,6 +21,16 @@ function loadToken() {
   throw new Error('missing token')
 }
 const TOKEN = loadToken()
+
+function gitRev() {
+  try {
+    return execSync('git rev-parse --short HEAD', {
+      cwd: fileURLToPath(new URL('.', import.meta.url)),
+    }).toString().trim()
+  } catch {
+    return 'unknown'
+  }
+}
 
 const CLOCKS = {
   tabletop: '2020-06-01',
@@ -528,10 +540,25 @@ function unpack(payload) {
   return payload
 }
 
+function notInLake(extra = {}) {
+  return {
+    reading: 'Not in the lake.',
+    answer: 'No claim for that card. The desk is not calling it legal.',
+    silence: true,
+    inForce: [],
+    notInForce: [],
+    tools: [],
+    keywordKept: 0,
+    windowKept: 0,
+    ...extra,
+  }
+}
+
 async function answer(text) {
   const tools = []
   const lang = detectLang(text)
   const ban = banSubject(text)
+  if (/\b(banned|suspended|restricted)\b/i.test(text) && !ban) return notInLake()
   const known = resolveKnown(text)
   const whoEarly = companionNamed(text)
   const compareDate = wantsCompare(text) ? askedDate(text) || known?.date : null
@@ -604,6 +631,9 @@ async function answer(text) {
       const rows = unpack(claimsRaw)
       const list = await markQuotes(Array.isArray(rows) ? rows : [])
       const {inForce, notInForce} = split(list, day)
+      if (!list.length) {
+        return notInLake({lang, platform: plat, date: day, tools, subject: ban})
+      }
       const top = inForce[0]
       const clockDoc = top?.clockDoc || list[0]?.clockDoc || 'rules-change-standard-bans'
       const banClocks = await mcp('array_field_reader', {
@@ -631,6 +661,9 @@ async function answer(text) {
         similar,
         subject: ban,
         predicate: wanted || top?.predicate || null,
+        keywordKept: list.length,
+        windowKept: inForce.length,
+        otherValue: notInForce[0]?.value || null,
       }
     }
   }
@@ -744,6 +777,9 @@ async function answer(text) {
       tools,
       clocks: unpack(clocks),
       similar,
+      keywordKept: list.length,
+      windowKept: localizedIn.length,
+      otherValue: localizedOut[0]?.value || null,
     }
   }
 
@@ -765,6 +801,9 @@ async function answer(text) {
     tools,
     clocks: unpack(clocks),
     similar,
+    keywordKept: list.length,
+    windowKept: localizedIn.length,
+    otherValue: localizedOut[0]?.value || null,
   }
 }
 
@@ -974,9 +1013,9 @@ function claimCard(title, items, bind, kind) {
   if (!items || !items.length) return ''
   return '<section class="panel ' + kind + '"><p class="eyebrow">' + esc(title) + '</p>' +
     items.map(c => '<div class="claim"><p><strong>' + esc(c.value) + '</strong></p>' +
-      (c.quote ? '<p class="quote">“' + esc(c.quote) + '”</p>' : '') +
-      (c.quoteOk === true ? '<p class="muted">That line is in the stored excerpt.</p>' : '') +
-      (c.quoteOk === false ? '<p class="muted">That line is not in the stored excerpt.</p>' : '') +
+      (c.quote && c.quoteOk === true
+        ? '<p class="quote">“' + esc(c.quote) + '”</p><p class="muted">Verbatim in the stored excerpt.</p>'
+        : (c.quote ? '<p class="muted">Summary, not a line from the page.</p>' : '')) +
       '<p class="muted">' + esc(c.effectiveFrom || '?') +
       (c.effectiveUntil ? ' → ' + esc(c.effectiveUntil) : ' → open') +
       (c.sourceTitle ? ' · ' + esc(c.sourceTitle) : '') + '</p>' +
@@ -1042,6 +1081,10 @@ async function ask() {
           (last.platform ? ' · ' + esc(last.platform) + ' @ ' + esc(last.date) : '') +
           (last.bound ? ' · already bound' : '') +
           (last.prepared ? ' · written, not signed' : '') + '</p>' +
+        (last.keywordKept != null
+          ? '<p class="muted">Search keeps ' + esc(last.keywordKept) + '. The window keeps ' + esc(last.windowKept) + '.</p>'
+          : '') +
+        (last.otherValue ? '<p class="muted">Not in force: ' + esc(last.otherValue) + '</p>' : '') +
       '</section>' +
       lanes +
       claimCard('In force on this clock', last.inForce, !last.bound, 'force') +
@@ -1259,6 +1302,21 @@ async function buildScorecard() {
   const payLine = 'you can pay 3 generic mana to put your companion from your sideboard into your hand'
   push('quote-in-excerpt', blob.toLowerCase().includes(payLine), payLine)
 
+  const splitAsk = await answer('two days before Arena switched, do I pay 3 or cast it from outside the game?')
+  const forced = (splitAsk.inForce || [])[0]
+  const verbatimOther = (splitAsk.notInForce || []).some((c) => c.quoteOk === true)
+  push(
+    'quote-marks',
+    forced?.quoteOk === false && verbatimOther && (splitAsk.keywordKept || 0) > (splitAsk.windowKept || 0),
+    `search ${splitAsk.keywordKept} · window ${splitAsk.windowKept} · in-force verbatim ${forced?.quoteOk}`,
+  )
+  const lotus = await answer('On Arena, June 2 2020, is Black Lotus banned in Vintage?')
+  push(
+    'not-in-lake',
+    /not calling it legal/i.test(lotus.answer || '') && !(lotus.inForce || []).length,
+    (lotus.answer || '').slice(0, 90),
+  )
+
   const arenaQ = `*[_type=="rulesClaim" && predicate=="bringIntoGame" && platform=="arena"]{effectiveFrom, effectiveUntil}`
   const arenaRows = await fetch(`https://${PROJECT}.api.sanity.io/v2021-10-21/data/query/${DATASET}?query=` + encodeURIComponent(arenaQ)).then((r) => r.json())
   const spans = arenaRows.result || []
@@ -1315,14 +1373,14 @@ async function buildScorecard() {
 
   return {
     at: new Date().toISOString(),
-    summary: {pathOne, pathTwo, claims, sources, failed, passed: probes.length - failed},
+    summary: {pathOne, pathTwo, claims, sources, failed, passed: probes.length - failed, rev: gitRev()},
     probes,
     mcp: {rules: MCP, sign: MCP_SIGN, sources: MCP_SOURCES},
     june2: {inForce, notInForce, decision},
     workflow: {id: wf?._id || null, stage: wf?.currentStage || null},
     why:
       failed === 0
-        ? 'All checks passed: lake counts, June 2 split, unsigned case, agent tries recorded, the pay-3 line in the excerpt, one Arena window, Needle on June 3, a French ask, Field of the Dead, the agent refuse, a blank signature, and the workflow editor refuse.'
+        ? 'All checks passed: lake counts, June 2 split, unsigned case, agent tries, pay-3 verbatim in the excerpt, paraphrase not quoted, a missing card left uncalled, one Arena window, Needle on June 3, a French ask, Field of the Dead, the agent refuse, a blank signature, and the workflow editor refuse.'
         : `${failed} check(s) failed.`,
   }
 }

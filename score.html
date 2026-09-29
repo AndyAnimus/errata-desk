@@ -59,7 +59,7 @@ async function load() {
   probes.innerHTML = (data.probes || []).map(p =>
     '<div class="row"><div class="mark '+(p.ok?'':'bad')+'">'+(p.ok?'PASS':'FAIL')+'</div><div><b style="color:var(--ink)">'+esc(p.name)+'</b><div>'+esc(p.detail)+'</div></div></div>'
   ).join('')
-  why.textContent = data.why || ''
+  why.textContent = (data.why || '') + (s.rev ? ' · ' + s.rev : '')
 }
 document.getElementById('rerun').onclick = () => { document.getElementById('rerun').disabled = true; load().finally(() => { document.getElementById('rerun').disabled = false }) }
 load()
